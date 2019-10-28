@@ -38,7 +38,7 @@ func Load() {
 
 func loadDatabaseConfig() *Database {
 	return &Database{
-		PSN:        environment.GetEnv("DATABASE_PSN", "root@(localhost)?charset=utf8&parseTime=True&loc=Local"),
+		PSN:        environment.GetEnv("DATABASE_PSN", "root@(localhost)/test?charset=utf8&parseTime=True&loc=Local"),
 		LogQueries: environment.GetEnvAsBool("DATABASE_LOG", false),
 		Timeout:    environment.GetEnvAsInt("DATABASE_TIMEOUT", 0),
 	}

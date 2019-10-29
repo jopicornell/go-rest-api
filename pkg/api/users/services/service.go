@@ -1,15 +1,16 @@
-package users
+package services
 
 import (
+	"github.com/jmoiron/sqlx"
 	"github.com/jopicornell/go-rest-api/pkg/util/database"
 	"github.com/jopicornell/go-rest-api/pkg/util/models"
 )
 
-type Service interface {
-	getUsers() (users []models.User, err error)
+type Service struct {
+	DB *sqlx.DB
 }
 
-func getUsers() (users []models.User, err error) {
+func (s *Service) GetUsers() (users []models.User, err error) {
 	err = database.GetDB().Select(&users, "SELECT * from users")
 	return
 }

@@ -27,16 +27,21 @@ type JWT struct {
 	SigningAlgorithm string
 }
 
-var dbConfig *Database
+var dbConfig *Database = loadDatabaseConfig()
 
-func Load() {
+var environmentFileParsed = false
+
+func load() {
 	if err := godotenv.Load(); err != nil {
 		log.Print("No .env file found")
 	}
-	dbConfig = loadDatabaseConfig()
+	environmentFileParsed = true
 }
 
 func loadDatabaseConfig() *Database {
+	if environmentFileParsed {
+		load()
+	}
 	return &Database{
 		PSN:        environment.GetEnv("DATABASE_PSN", "root@(localhost)/test?charset=utf8&parseTime=True&loc=Local"),
 		LogQueries: environment.GetEnvAsBool("DATABASE_LOG", false),

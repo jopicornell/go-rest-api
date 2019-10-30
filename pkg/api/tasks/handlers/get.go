@@ -1,40 +1,42 @@
 package handlers
 
 import (
+	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/jopicornell/go-rest-api/internals/errors"
 	taskService "github.com/jopicornell/go-rest-api/pkg/api/tasks/services"
 	"github.com/jopicornell/go-rest-api/pkg/database"
-	"github.com/jopicornell/go-rest-api/pkg/util"
+	"log"
 	"net/http"
 	"strconv"
 )
 
-var tService = &taskService.Service{
+var tService = &taskService.TaskService{
 	DB: database.GetDB(),
 }
 
-func GetTasksHandler(w http.ResponseWriter, _ *http.Request) {
+func GetTasksHandler(w http.ResponseWriter, _ *http.Request) (interface{}, error) {
 	tasks, err := tService.GetTasks()
 	if err != nil {
-		util.WriteInternalErrorToResponse(w, err)
-		return
+		log.Println(fmt.Errorf("error getting tasks: %w", err))
+		return nil, errors.InternalServerError
 	}
-	util.WriteToJson(w, tasks)
+	return tasks, nil
 }
 
-func GetOneTaskHandler(w http.ResponseWriter, r *http.Request) {
+func GetOneTaskHandler(_ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
-		util.WriteInternalErrorToResponse(w, err)
+		log.Println(fmt.Errorf("error converting id: %s to integer", mux.Vars(r)["id"]))
+		return nil, errors.InternalServerError
 	}
 	task, err := tService.GetTask(uint(id))
 	if err != nil {
-		util.WriteInternalErrorToResponse(w, err)
-		return
+		log.Println(fmt.Errorf("error getting task(%d): %w", id, err))
+		return nil, err
 	}
 	if task == nil {
-		w.WriteHeader(404)
-		return
+		return nil, errors.NotFound
 	}
-	util.WriteToJson(w, task)
+	return task, nil
 }

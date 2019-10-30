@@ -7,11 +7,11 @@ import (
 	"github.com/jopicornell/go-rest-api/pkg/models"
 )
 
-type Service struct {
+type TaskService struct {
 	DB *sqlx.DB
 }
 
-func (s *Service) GetTasks() (tasks []models.Task, err error) {
+func (s *TaskService) GetTasks() (tasks []models.Task, err error) {
 	err = database.GetDB().Select(&tasks, "SELECT * from tasks")
 	if tasks == nil {
 		tasks = []models.Task{}
@@ -19,7 +19,16 @@ func (s *Service) GetTasks() (tasks []models.Task, err error) {
 	return
 }
 
-func (s *Service) GetTask(id uint) (*models.Task, error) {
+func (s *TaskService) GetTask(id uint) (*models.Task, error) {
+	var task models.Task
+	err := database.GetDB().Get(&task, "SELECT * from tasks where id = ?", id)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &task, nil
+}
+
+func (s *TaskService) UpdateTask(id uint) (*models.Task, error) {
 	var task models.Task
 	err := database.GetDB().Get(&task, "SELECT * from tasks where id = ?", id)
 	if err == sql.ErrNoRows {

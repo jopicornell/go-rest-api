@@ -2,8 +2,8 @@ package services
 
 import (
 	"github.com/jmoiron/sqlx"
-	"github.com/jopicornell/go-rest-api/pkg/util/database"
-	"github.com/jopicornell/go-rest-api/pkg/util/models"
+	"github.com/jopicornell/go-rest-api/pkg/database"
+	"github.com/jopicornell/go-rest-api/pkg/models"
 )
 
 type Service struct {
@@ -11,6 +11,6 @@ type Service struct {
 }
 
 func (s *Service) GetUsers() (users []models.User, err error) {
-	err = database.GetDB().Select(&users, "SELECT * from users")
+	err = database.GetDB().Select(&users, "SELECT * from tasks")
 	return
 }

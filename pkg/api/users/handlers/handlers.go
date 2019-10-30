@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	userService "github.com/jopicornell/go-rest-api/pkg/api/users/services"
-	"github.com/jopicornell/go-rest-api/pkg/util/database"
+	"github.com/jopicornell/go-rest-api/pkg/database"
 	"log"
 	"net/http"
 )

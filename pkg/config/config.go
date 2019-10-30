@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/joho/godotenv"
-	"github.com/jopicornell/go-rest-api/pkg/util/environment"
+	"github.com/jopicornell/go-rest-api/pkg/environment"
 	"log"
 )
 

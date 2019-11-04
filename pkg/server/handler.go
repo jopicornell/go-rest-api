@@ -1,4 +1,4 @@
-package api
+package server
 
 import (
 	"encoding/json"
@@ -6,10 +6,18 @@ import (
 	"net/http"
 )
 
-func HandlerManager(handler func(http.ResponseWriter, *http.Request) (interface{}, error)) func(http.ResponseWriter, *http.Request) {
+type HandlerSerializer func(func(http.ResponseWriter, Request) (interface{}, error)) http.HandlerFunc
 
+type HandlerFunc func(http.ResponseWriter, Request) (interface{}, error)
+
+type Handler struct {
+	*Server
+	routes map[string]func()
+}
+
+func HandleJSONResponse(handler HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		resource, err := handler(w, r)
+		resource, err := handler(w, Wrap(r))
 		if err != nil {
 			handleError(w, err)
 			return
@@ -24,9 +32,9 @@ func HandlerManager(handler func(http.ResponseWriter, *http.Request) (interface{
 
 func handleError(w http.ResponseWriter, err error) {
 	switch err {
-	case errors.InternalServerError:
-		w.WriteHeader(500)
 	case errors.NotFound:
 		w.WriteHeader(404)
+	default:
+		w.WriteHeader(500)
 	}
 }

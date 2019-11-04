@@ -8,6 +8,7 @@ import (
 	migrationDriver "github.com/golang-migrate/migrate/v4/database"
 	"github.com/golang-migrate/migrate/v4/database/mysql"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jopicornell/go-rest-api/pkg/config"
 	"github.com/jopicornell/go-rest-api/pkg/database"
 	"log"
 	"strconv"
@@ -16,7 +17,10 @@ import (
 func main() {
 	var err error
 	var driver migrationDriver.Driver
-	driver, err = mysql.WithInstance(database.GetDB().DB, &mysql.Config{})
+	config := config.Config{}
+	config.Bootstrap()
+	db := database.MySQL{PSN: config.GetDBConfig().PSN}
+	driver, err = mysql.WithInstance(db.GetDB().DB, &mysql.Config{})
 	if err != nil {
 		log.Fatal("Unable to connect to db")
 	}

@@ -12,13 +12,6 @@ type Database struct {
 	Timeout    int
 }
 
-type Server struct {
-	Port         string
-	Debug        bool
-	ReadTimeout  int
-	WriteTimeout int
-}
-
 type JWT struct {
 	Secret           string
 	Duration         int
@@ -27,20 +20,22 @@ type JWT struct {
 	SigningAlgorithm string
 }
 
-var dbConfig *Database = loadDatabaseConfig()
+type Config struct {
+	dbConfig    *Database
+	bootstraped bool
+}
 
-var environmentFileParsed = false
-
-func load() {
+func (c *Config) Bootstrap() {
 	if err := godotenv.Load(); err != nil {
 		log.Print("No .env file found")
 	}
-	environmentFileParsed = true
+	c.dbConfig = c.loadDatabaseConfig()
+	c.bootstraped = true
 }
 
-func loadDatabaseConfig() *Database {
-	if environmentFileParsed {
-		load()
+func (c *Config) loadDatabaseConfig() *Database {
+	if c.bootstraped {
+		c.Bootstrap()
 	}
 	return &Database{
 		PSN:        environment.GetEnv("DATABASE_PSN", "root@(localhost)/test?charset=utf8&parseTime=True&loc=Local"),
@@ -49,6 +44,6 @@ func loadDatabaseConfig() *Database {
 	}
 }
 
-func GetDBConfig() *Database {
-	return dbConfig
+func (c *Config) GetDBConfig() *Database {
+	return c.dbConfig
 }

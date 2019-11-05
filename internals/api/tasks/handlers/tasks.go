@@ -15,11 +15,10 @@ type TaskHandler struct {
 	taskService services.TaskService
 }
 
-func New(s *server.Server) (taskHandler *TaskHandler) {
-	taskHandler = &TaskHandler{
+func New(s *server.Server) *TaskHandler {
+	return &TaskHandler{
 		taskService: services.New(s.GetRelationalDatabase()),
 	}
-	return
 }
 
 func (s *TaskHandler) GetTasksHandler(w http.ResponseWriter, _ server.Request) (interface{}, error) {

@@ -20,9 +20,16 @@ type JWT struct {
 	SigningAlgorithm string
 }
 
+type Server struct {
+	ApiUrl      string
+	StaticsPath string
+	Port        string
+}
+
 type Config struct {
-	dbConfig    *Database
-	bootstraped bool
+	dbConfig     *Database
+	serverConfig *Server
+	bootstraped  bool
 }
 
 func (c *Config) Bootstrap() {
@@ -30,13 +37,11 @@ func (c *Config) Bootstrap() {
 		log.Print("No .env file found")
 	}
 	c.dbConfig = c.loadDatabaseConfig()
+	c.serverConfig = c.loadServerConfig()
 	c.bootstraped = true
 }
 
 func (c *Config) loadDatabaseConfig() *Database {
-	if c.bootstraped {
-		c.Bootstrap()
-	}
 	return &Database{
 		PSN:        environment.GetEnv("DATABASE_PSN", "root@(localhost)/test?charset=utf8&parseTime=True&loc=Local"),
 		LogQueries: environment.GetEnvAsBool("DATABASE_LOG", false),
@@ -44,6 +49,18 @@ func (c *Config) loadDatabaseConfig() *Database {
 	}
 }
 
+func (c *Config) loadServerConfig() *Server {
+	return &Server{
+		Port:        environment.GetEnv("PORT", "8080"),
+		ApiUrl:      environment.GetEnv("API_URL", "/api"),
+		StaticsPath: environment.GetEnv("STATICS_PATH", "static"),
+	}
+}
+
 func (c *Config) GetDBConfig() *Database {
 	return c.dbConfig
+}
+
+func (c *Config) GetServerConfig() *Server {
+	return c.serverConfig
 }

@@ -7,7 +7,7 @@ import (
 )
 
 type TaskService interface {
-	GetTasks() (*[]models.Task, error)
+	GetTasks() ([]models.Task, error)
 	GetTask(uint) (*models.Task, error)
 }
 
@@ -21,10 +21,10 @@ func New(db *sqlx.DB) TaskService {
 	}
 }
 
-func (s *taskService) GetTasks() (tasks *[]models.Task, err error) {
+func (s *taskService) GetTasks() (tasks []models.Task, err error) {
 	err = s.DB.Select(&tasks, "SELECT * from tasks")
 	if tasks == nil {
-		tasks = &[]models.Task{}
+		tasks = []models.Task{}
 	}
 	return
 }

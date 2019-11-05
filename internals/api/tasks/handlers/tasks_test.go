@@ -9,7 +9,6 @@ import (
 	"gopkg.in/guregu/null.v3"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
 type TaskHandlerMock struct {
@@ -18,18 +17,25 @@ type TaskHandlerMock struct {
 
 type TaskServiceMock struct {
 	task  *models.Task
-	tasks *[]models.Task
+	tasks []models.Task
 }
 
 func (ts *TaskServiceMock) GetTask(id uint) (*models.Task, error) {
 	return ts.task, nil
 }
 
-func (ts *TaskServiceMock) GetTasks() (*[]models.Task, error) {
+func (ts *TaskServiceMock) GetTasks() ([]models.Task, error) {
 	return ts.tasks, nil
 }
 
 func TestTaskHandler_GetOneTaskHandler(t *testing.T) {
+	t.Run("should throw error if service is missing", panicErrorServiceMissing)
+	t.Run("should throw an InternalServerError if id is invalid", failIfTaskIdIsInvalid)
+	t.Run("should throw a NotFound if service says so", notFoundIfServiceFoundsNothing)
+	t.Run("should return task returned by the service", returnTaskByService)
+}
+
+func TestTaskHandler_GetTasksHandler(t *testing.T) {
 	t.Run("should throw error if service is missing", panicErrorServiceMissing)
 	t.Run("should throw an InternalServerError if id is invalid", failIfTaskIdIsInvalid)
 	t.Run("should throw a NotFound if service says so", notFoundIfServiceFoundsNothing)
@@ -76,11 +82,7 @@ func returnTaskByService(t *testing.T) {
 		ID:          0,
 		Title:       "",
 		Description: null.String{},
-		Status:      "",
-		Priority:    0,
-		StartDate:   null.Time{},
-		DueDate:     null.Time{},
-		CreatedAt:   time.Time{},
+		Date:        null.Time{},
 	}
 	mock.taskService = &TaskServiceMock{task: expected}
 	recorder := httptest.NewRecorder()
@@ -108,7 +110,7 @@ func notFoundIfServiceFoundsNothing(t *testing.T) {
 	})
 	expected := errors.NotFound
 	if res, err := mock.GetOneTaskHandler(recorder, request); err != nil {
-		if res != expected {
+		if err != expected {
 			t.Errorf("expected %+v got %+v", expected, res)
 		}
 	} else {

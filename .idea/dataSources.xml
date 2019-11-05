@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="MySQL - palmactiva@localhost" uuid="d615d4bd-1dc2-4a9d-894c-569d36a282a5">
+    <data-source source="LOCAL" name="palmactiva@localhost" uuid="a94d7e31-9301-46eb-ada9-7dc45e76f28b">
       <driver-ref>mysql.8</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>

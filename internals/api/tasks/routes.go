@@ -7,7 +7,7 @@ import (
 
 func ConfigureRoutes(s *server.Server) {
 	handler := handlers.New(s)
-	s.AddRoute("/tasks", handler.GetTasksHandler)
-	s.AddRoute("/tasks/{id:[0-9]+}", handler.GetOneTaskHandler)
-	return
+	s.AddApiRoute("/tasks", handler.GetTasksHandler).Methods("GET")
+	s.AddApiRoute("/tasks/{id:[0-9]+}", handler.GetOneTaskHandler).Methods("GET")
+	s.AddStatics("/", "static")
 }

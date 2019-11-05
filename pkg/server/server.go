@@ -1,12 +1,15 @@
 package server
 
 import (
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/jopicornell/go-rest-api/pkg/config"
 	"github.com/jopicornell/go-rest-api/pkg/database"
 	"log"
 	"net/http"
+	"path"
+	"path/filepath"
 )
 
 func Initialize() *Server {
@@ -14,6 +17,7 @@ func Initialize() *Server {
 	server.Config.Bootstrap()
 	server.initializeRelationalDatabase()
 	server.Router = mux.NewRouter().StrictSlash(true)
+	server.ApiRouter = server.Router.PathPrefix(server.GetServerConfig().ApiUrl).Subrouter()
 	return server
 }
 
@@ -21,6 +25,7 @@ type Server struct {
 	config.Config
 	relationalDB *database.MySQL
 	Router       *mux.Router
+	ApiRouter    *mux.Router
 }
 
 func (s *Server) Close() {
@@ -31,8 +36,19 @@ func (s *Server) GetRelationalDatabase() *sqlx.DB {
 	return s.relationalDB.GetDB()
 }
 
-func (s *Server) AddRoute(path string, handler HandlerFunc) {
-	s.Router.HandleFunc(path, HandleJSONResponse(handler))
+func (s *Server) AddApiRoute(path string, handler HandlerFunc) *mux.Route {
+	return s.ApiRouter.HandleFunc(path, HandleJSONResponse(handler))
+}
+
+func (s *Server) AddRoute(path string, handler HandlerFunc) *mux.Route {
+	return s.Router.HandleFunc(path, HandleJSONResponse(handler))
+}
+
+func (s *Server) AddStatics(exposePath string, staticPath string) {
+	basePath, _ := filepath.Abs("./")
+	staticPath = path.Join(basePath, staticPath)
+	fileServer := http.FileServer(http.Dir(staticPath))
+	s.Router.PathPrefix(exposePath).Handler(http.StripPrefix(exposePath, fileServer))
 }
 
 func (s *Server) AddRouteWithSerializerFunc(path string, handler HandlerFunc, serializer HandlerSerializer) {
@@ -40,7 +56,7 @@ func (s *Server) AddRouteWithSerializerFunc(path string, handler HandlerFunc, se
 }
 
 func (s Server) ListenAndServe() {
-	log.Panic(http.ListenAndServe(":8080", s.Router))
+	log.Panic(http.ListenAndServe(fmt.Sprintf(":%s", s.GetServerConfig().Port), s.Router))
 }
 
 func (s *Server) initializeRelationalDatabase() *sqlx.DB {

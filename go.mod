@@ -10,5 +10,6 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/onsi/gomega v1.4.3
 	github.com/pkg/errors v0.8.1
+	golang.org/x/tools v0.0.0-20190425222832-ad9eeb80039a
 	gopkg.in/guregu/null.v3 v3.4.0
 )

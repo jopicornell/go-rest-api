@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/jopicornell/go-rest-api/internals/api/tasks/services"
 	"github.com/jopicornell/go-rest-api/internals/errors"
+	"github.com/jopicornell/go-rest-api/pkg/models"
 	"github.com/jopicornell/go-rest-api/pkg/server"
 	"log"
 	"net/http"
@@ -37,6 +39,32 @@ func (s *TaskHandler) GetOneTaskHandler(_ http.ResponseWriter, r server.Request)
 		return nil, errors.InternalServerError
 	}
 	task, err := s.taskService.GetTask(uint(id))
+	if err != nil {
+		log.Println(fmt.Errorf("error getting task(%d): %w", id, err))
+		return nil, err
+	}
+	if task == nil {
+		return nil, errors.NotFound
+	}
+	return task, nil
+}
+
+func (s *TaskHandler) UpdateTaskHandler(_ http.ResponseWriter, r server.Request) (interface{}, error) {
+	id, err := strconv.Atoi(r.GetPathParameters()["id"])
+	if err != nil {
+		log.Println(fmt.Errorf("error converting id: %s to integer", r.GetPathParameters()["id"]))
+		return nil, errors.InternalServerError
+	}
+	var task *models.Task
+	body, err := r.GetBody()
+	if err != nil {
+		return nil, errors.BadRequest
+	}
+	err = json.Unmarshal(body, &task)
+	if err != nil {
+		return nil, errors.BadRequest
+	}
+	task, err = s.taskService.UpdateTask(uint(id), task)
 	if err != nil {
 		log.Println(fmt.Errorf("error getting task(%d): %w", id, err))
 		return nil, err

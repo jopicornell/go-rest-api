@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/gorilla/mux"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -13,6 +14,7 @@ type request struct {
 type Request interface {
 	GetPathParameters() map[string]string
 	GetRequest() *http.Request
+	GetBody() ([]byte, error)
 }
 
 func Wrap(r *http.Request) *request {
@@ -24,6 +26,11 @@ func Wrap(r *http.Request) *request {
 
 func (r *request) GetRequest() *http.Request {
 	return r.Request
+}
+
+func (r *request) GetBody() ([]byte, error) {
+	body, err := ioutil.ReadAll(r.Request.Body)
+	return body, err
 }
 
 func (r *request) GetPathParameters() map[string]string {

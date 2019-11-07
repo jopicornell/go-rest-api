@@ -11,11 +11,11 @@ type HandlerSerializer func(func(http.ResponseWriter, Request) (interface{}, err
 type HandlerFunc func(http.ResponseWriter, Request) (interface{}, error)
 
 type Handler struct {
-	*Server
+	Server
 	routes map[string]func()
 }
 
-func HandleJSONResponse(handler HandlerFunc) http.HandlerFunc {
+func HandleJSONResponse(handler HandlerFunc, statusCode int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resource, err := handler(w, Wrap(r))
 		if err != nil {
@@ -24,6 +24,7 @@ func HandleJSONResponse(handler HandlerFunc) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
 		if err = json.NewEncoder(w).Encode(resource); err != nil {
 
 		}

@@ -7,7 +7,6 @@ import (
 	"github.com/jopicornell/go-rest-api/internals/errors"
 	"github.com/jopicornell/go-rest-api/pkg/config"
 	"github.com/jopicornell/go-rest-api/pkg/models"
-	"github.com/jopicornell/go-rest-api/pkg/server"
 	"github.com/jopicornell/go-rest-api/pkg/servertesting"
 	"gopkg.in/guregu/null.v3"
 	"net/http/httptest"
@@ -24,26 +23,32 @@ type TaskHandlerMock struct {
 type TaskServiceMock struct {
 	task         *models.Task
 	tasks        []models.Task
-	throwError   bool
 	errorToThrow error
 }
 
 func (ts *TaskServiceMock) UpdateTask(id uint, task *models.Task) (*models.Task, error) {
-	if ts.throwError {
+	if ts.errorToThrow != nil {
+		return nil, ts.errorToThrow
+	}
+	return ts.task, nil
+}
+
+func (ts *TaskServiceMock) CreateTask(task *models.Task) (*models.Task, error) {
+	if ts.errorToThrow != nil {
 		return nil, ts.errorToThrow
 	}
 	return ts.task, nil
 }
 
 func (ts *TaskServiceMock) GetTask(id uint) (*models.Task, error) {
-	if ts.throwError {
+	if ts.errorToThrow != nil {
 		return nil, ts.errorToThrow
 	}
 	return ts.task, nil
 }
 
 func (ts *TaskServiceMock) GetTasks() ([]models.Task, error) {
-	if ts.throwError {
+	if ts.errorToThrow != nil {
 		return nil, ts.errorToThrow
 	}
 	return ts.tasks, nil
@@ -115,9 +120,7 @@ func failIfTaskIdIsInvalid(t *testing.T) {
 
 func returnTaskByService(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = &server.Server{
-		Config: config.Config{},
-	}
+	mock.Server = servertesting.Initialize(&config.Config{})
 	expected := &models.Task{
 		ID:          0,
 		Title:       "",
@@ -140,9 +143,7 @@ func returnTaskByService(t *testing.T) {
 
 func returnTasksByService(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = &server.Server{
-		Config: config.Config{},
-	}
+	mock.Server = servertesting.Initialize(&config.Config{})
 	expected := []models.Task{
 		{
 			ID:          0,
@@ -175,13 +176,10 @@ func returnTasksByService(t *testing.T) {
 
 func internalErrorIfServiceFailsReturningTask(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = &server.Server{
-		Config: config.Config{},
-	}
+	mock.Server = servertesting.Initialize(&config.Config{})
 	var expected *models.Task = nil
 	mock.taskService = &TaskServiceMock{
 		task:         expected,
-		throwError:   true,
 		errorToThrow: goErrors.New("test error"),
 	}
 	recorder := httptest.NewRecorder()
@@ -199,13 +197,10 @@ func internalErrorIfServiceFailsReturningTask(t *testing.T) {
 
 func internalErrorIfServiceFailsReturningTasks(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = &server.Server{
-		Config: config.Config{},
-	}
+	mock.Server = servertesting.Initialize(&config.Config{})
 	var expected []models.Task = nil
 	mock.taskService = &TaskServiceMock{
 		tasks:        expected,
-		throwError:   true,
 		errorToThrow: goErrors.New("test error"),
 	}
 	recorder := httptest.NewRecorder()
@@ -221,9 +216,7 @@ func internalErrorIfServiceFailsReturningTasks(t *testing.T) {
 
 func notFoundIfServiceFoundsNothing(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = &server.Server{
-		Config: config.Config{},
-	}
+	mock.Server = servertesting.Initialize(&config.Config{})
 	mock.taskService = &TaskServiceMock{}
 	recorder := httptest.NewRecorder()
 	request := servertesting.NewRequest(httptest.NewRequest("GET", "/tasks/1", nil), map[string]string{
@@ -240,7 +233,9 @@ func notFoundIfServiceFoundsNothing(t *testing.T) {
 }
 
 func shouldReturnConstructedHandler(t *testing.T) {
-	serverMock := server.Initialize()
+	serverMock := &servertesting.ServerMock{
+		Config: config.Config{},
+	}
 	taskHandler := New(serverMock)
 	if taskHandler == nil {
 		t.Errorf("task handler should not be null")
@@ -253,13 +248,10 @@ func shouldReturnConstructedHandler(t *testing.T) {
 
 func updateTaskShouldReturnUpdatedTask(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = &server.Server{
-		Config: config.Config{},
-	}
+	mock.Server = servertesting.Initialize(&config.Config{})
 	task := createFakeTask()
 	mock.taskService = &TaskServiceMock{
 		task:         task,
-		throwError:   false,
 		errorToThrow: nil,
 	}
 	var taskJSON string
@@ -289,14 +281,11 @@ func updateTaskShouldReturnUpdatedTask(t *testing.T) {
 
 func updateTaskShouldThrowIfServiceFails(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = &server.Server{
-		Config: config.Config{},
-	}
+	mock.Server = servertesting.Initialize(&config.Config{})
 	task := createFakeTask()
 	errorToThrow := goErrors.New("test error")
 	mock.taskService = &TaskServiceMock{
 		task:         task,
-		throwError:   true,
 		errorToThrow: errorToThrow,
 	}
 	var taskJSON string
@@ -350,9 +339,7 @@ func updateTaskShouldFailIfTaskIdIsInvalid(t *testing.T) {
 
 func updateTaskShouldFailIfJsonIdIsInvalid(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = &server.Server{
-		Config: config.Config{},
-	}
+	mock.Server = servertesting.Initialize(&config.Config{})
 	taskJSON := "Invalid json;{{}"
 
 	recorder := httptest.NewRecorder()
@@ -376,9 +363,7 @@ func updateTaskShouldFailIfJsonIdIsInvalid(t *testing.T) {
 
 func updateTaskShouldFailIfBodyIdIsInvalid(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = &server.Server{
-		Config: config.Config{},
-	}
+	mock.Server = servertesting.Initialize(&config.Config{})
 	task := createFakeTask()
 	var taskJSON string
 	if marshallResult, err := json.Marshal(task); err == nil {
@@ -407,14 +392,11 @@ func updateTaskShouldFailIfBodyIdIsInvalid(t *testing.T) {
 }
 func updateTaskShouldThrowNotFound(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = &server.Server{
-		Config: config.Config{},
-	}
+	mock.Server = servertesting.Initialize(&config.Config{})
 	task := createFakeTask()
 	errorToThrow := errors.NotFound
 	mock.taskService = &TaskServiceMock{
 		task:         nil,
-		throwError:   false,
 		errorToThrow: nil,
 	}
 	var taskJSON string
@@ -444,9 +426,22 @@ func updateTaskShouldThrowNotFound(t *testing.T) {
 
 func createTaskShouldReturnCreatedTask(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = &server.Server{
-		Config: config.Config{},
+	mock.Server = servertesting.Initialize(&config.Config{})
+	task := createFakeTask()
+	mock.taskService = &TaskServiceMock{
+		task:         task,
+		errorToThrow: nil,
 	}
+	var taskJSON string
+	if marshallResult, err := json.Marshal(task); err == nil {
+		taskJSON = string(marshallResult)
+	} else {
+		t.Errorf("error marshalling task %w", err)
+	}
+	recorder := httptest.NewRecorder()
+	request := servertesting.NewRequest(
+		httptest.NewRequest("GET", "/tasks/1", strings.NewReader(taskJSON)), map[string]string{},
+	)
 	if got, err := mock.CreateTaskHandler(recorder, request); err == nil {
 		if got == nil {
 			t.Errorf("expected result not to be null")
@@ -457,7 +452,35 @@ func createTaskShouldReturnCreatedTask(t *testing.T) {
 }
 
 func createTaskShouldThrowIfServiceFails(t *testing.T) {
+	mock := &TaskHandlerMock{}
+	mock.Server = servertesting.Initialize(&config.Config{})
 
+	task := createFakeTask()
+	var taskJSON string
+	if marshallResult, err := json.Marshal(task); err == nil {
+		taskJSON = string(marshallResult)
+	} else {
+		t.Errorf("error marshalling task %w", err)
+	}
+	mock.taskService = &TaskServiceMock{
+		task:         nil,
+		tasks:        nil,
+		errorToThrow: goErrors.New("test error"),
+	}
+	recorder := httptest.NewRecorder()
+	request := servertesting.NewRequest(
+		httptest.NewRequest("POST", "/tasks", strings.NewReader(taskJSON)), map[string]string{},
+	)
+	if got, err := mock.CreateTaskHandler(recorder, request); err != nil {
+		if got != nil {
+			t.Errorf("expected result to be nil")
+		}
+		if err != errors.InternalServerError {
+			t.Errorf("expected result to be %+v, got %+v", errors.InternalServerError, err)
+		}
+	} else {
+		t.Errorf("expected err not to be nil")
+	}
 }
 
 func createTaskShouldFailIfJsonIdIsInvalid(t *testing.T) {

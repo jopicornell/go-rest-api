@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 )
 
-func Initialize() *Server {
-	server := &Server{}
+func Initialize() Server {
+	server := &server{}
 	server.Config.Bootstrap()
 	server.initializeRelationalDatabase()
 	server.Router = mux.NewRouter().StrictSlash(true)
@@ -21,45 +21,55 @@ func Initialize() *Server {
 	return server
 }
 
-type Server struct {
+type Server interface {
+	Close()
+	GetRelationalDatabase() *sqlx.DB
+	AddApiRoute(path string, handler HandlerFunc, statusCode int) *mux.Route
+	AddRoute(string, HandlerFunc) *mux.Route
+	AddStatics(string, string)
+	AddRouteWithSerializerFunc(string, HandlerFunc, HandlerSerializer)
+	ListenAndServe()
+}
+
+type server struct {
 	config.Config
 	relationalDB *database.MySQL
 	Router       *mux.Router
 	ApiRouter    *mux.Router
 }
 
-func (s *Server) Close() {
+func (s *server) Close() {
 	log.Fatal(s.relationalDB.GetDB().Close())
 }
 
-func (s *Server) GetRelationalDatabase() *sqlx.DB {
+func (s *server) GetRelationalDatabase() *sqlx.DB {
 	return s.relationalDB.GetDB()
 }
 
-func (s *Server) AddApiRoute(path string, handler HandlerFunc) *mux.Route {
-	return s.ApiRouter.HandleFunc(path, HandleJSONResponse(handler))
+func (s *server) AddApiRoute(path string, handler HandlerFunc, statusCode int) *mux.Route {
+	return s.ApiRouter.HandleFunc(path, HandleJSONResponse(handler, statusCode))
 }
 
-func (s *Server) AddRoute(path string, handler HandlerFunc) *mux.Route {
-	return s.Router.HandleFunc(path, HandleJSONResponse(handler))
+func (s *server) AddRoute(path string, handler HandlerFunc) *mux.Route {
+	return s.Router.HandleFunc(path, HandleJSONResponse(handler, 200))
 }
 
-func (s *Server) AddStatics(exposePath string, staticPath string) {
+func (s *server) AddStatics(exposePath string, staticPath string) {
 	basePath, _ := filepath.Abs("./")
 	staticPath = path.Join(basePath, staticPath)
 	fileServer := http.FileServer(http.Dir(staticPath))
 	s.Router.PathPrefix(exposePath).Handler(http.StripPrefix(exposePath, fileServer))
 }
 
-func (s *Server) AddRouteWithSerializerFunc(path string, handler HandlerFunc, serializer HandlerSerializer) {
+func (s *server) AddRouteWithSerializerFunc(path string, handler HandlerFunc, serializer HandlerSerializer) {
 	s.Router.HandleFunc(path, serializer(handler))
 }
 
-func (s Server) ListenAndServe() {
+func (s server) ListenAndServe() {
 	log.Panic(http.ListenAndServe(fmt.Sprintf(":%s", s.GetServerConfig().Port), s.Router))
 }
 
-func (s *Server) initializeRelationalDatabase() *sqlx.DB {
+func (s *server) initializeRelationalDatabase() *sqlx.DB {
 	if s.relationalDB == nil {
 		s.relationalDB = &database.MySQL{
 			PSN: s.GetDBConfig().PSN,

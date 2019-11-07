@@ -37,6 +37,12 @@ func TestTaskService_GetTask(t *testing.T) {
 	t.Run("should return task if all went ok", getTaskShouldReturnTask)
 }
 
+func TestTaskService_CreateTask(t *testing.T) {
+	t.Run("should throw if db throws and rollback", createTaskShouldThrowIfDbThrows)
+	t.Run("should throw if task to create is null", createTaskShouldThrowIfTaskIsNull)
+	t.Run("should return created task and commit", createTaskShouldReturnTaskAndCommit)
+}
+
 func TestTaskService_UpdateTask(t *testing.T) {
 	t.Run("should throw if db throws and rollback", updateTaskShouldThrowIfDbThrows)
 	t.Run("should throw if task to updateis null", updateTaskShouldThrowIfTaskIsNull)
@@ -148,6 +154,35 @@ func getTaskShouldReturnTask(t *testing.T) {
 	} else {
 		t.Errorf("result should not be empty")
 	}
+}
+
+func createTaskShouldReturnTaskAndCommit(t *testing.T) {
+	dbMock, mock := mockDB(t)
+	taskService := New(dbMock)
+	task := createFakeTask()
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO tasks (.*)").WithArgs(
+		task.Title, task.Description.ValueOrZero(), task.Date,
+	).WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+	if got, err := taskService.CreateTask(task); err == nil {
+		if got == nil {
+			t.Errorf("expected response not to be null")
+		}
+		if task != got {
+			t.Errorf("expected result to be %+v, got %+v", task, got)
+		}
+	} else {
+		t.Errorf("error should be null, got %w", err)
+	}
+}
+
+func createTaskShouldThrowIfTaskIsNull(t *testing.T) {
+
+}
+
+func createTaskShouldThrowIfDbThrows(t *testing.T) {
+
 }
 
 func updateTaskShouldReturnTaskAndCommit(t *testing.T) {

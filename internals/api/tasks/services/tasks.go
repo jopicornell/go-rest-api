@@ -11,6 +11,7 @@ type TaskService interface {
 	GetTasks() ([]models.Task, error)
 	GetTask(uint) (*models.Task, error)
 	UpdateTask(uint, *models.Task) (*models.Task, error)
+	CreateTask(*models.Task) (*models.Task, error)
 }
 
 type taskService struct {
@@ -44,6 +45,27 @@ func (s *taskService) GetTask(id uint) (*models.Task, error) {
 	return &task, nil
 }
 
+func (s *taskService) CreateTask(task *models.Task) (*models.Task, error) {
+	if task == nil {
+		return nil, TaskNullError
+	}
+	insertQuery := "INSERT INTO tasks (title, description, date, completed) VALUES (?, ?, ?, 0)"
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(insertQuery, task.Title, task.Description, task.Date); err == nil {
+		err = tx.Commit()
+		return task, err
+	} else {
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			return nil, err
+		}
+		return nil, err
+	}
+}
+
 func (s *taskService) UpdateTask(id uint, task *models.Task) (*models.Task, error) {
 	if task == nil {
 		return nil, TaskNullError
@@ -62,5 +84,19 @@ func (s *taskService) UpdateTask(id uint, task *models.Task) (*models.Task, erro
 			return nil, err
 		}
 		return nil, err
+	}
+}
+
+func (s *taskService) DeleteTask(id uint) (err error) {
+	deleteQuery := "DELETE FROM tasks WHERE id = ?"
+	tx, err := s.db.Beginx()
+	if _, err := tx.Exec(deleteQuery); err == nil {
+		err = tx.Commit()
+	} else {
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			return errRollback
+		}
+		return err
 	}
 }

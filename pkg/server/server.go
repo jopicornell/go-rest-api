@@ -24,6 +24,7 @@ func Initialize() Server {
 type Server interface {
 	Close()
 	GetRelationalDatabase() *sqlx.DB
+	GetServerConfig() *config.Server
 	AddApiRoute(path string, handler HandlerFunc) *mux.Route
 	AddRoute(string, HandlerFunc) *mux.Route
 	AddStatics(string, string)

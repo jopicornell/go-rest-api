@@ -24,6 +24,7 @@ type Server struct {
 	ApiUrl      string
 	StaticsPath string
 	Port        string
+	JWTSecret   string
 }
 
 type Config struct {
@@ -54,6 +55,7 @@ func (c *Config) loadServerConfig() *Server {
 		Port:        environment.GetEnv("PORT", "8080"),
 		ApiUrl:      environment.GetEnv("API_URL", "/api"),
 		StaticsPath: environment.GetEnv("STATICS_PATH", "static"),
+		JWTSecret:   environment.GetEnv("JWT_SECRET", "secret"),
 	}
 }
 

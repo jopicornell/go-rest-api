@@ -38,6 +38,7 @@ func (s *ServerMock) GetServerConfig() *config.Server {
 		ApiUrl:      "",
 		StaticsPath: "",
 		Port:        "",
+		JWTSecret:   "secret",
 	}
 }
 

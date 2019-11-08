@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	goErrors "errors"
 	"github.com/bxcodec/faker/v3"
-	"github.com/jopicornell/go-rest-api/internals/errors"
+	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/pkg/config"
-	"github.com/jopicornell/go-rest-api/pkg/models"
 	"github.com/jopicornell/go-rest-api/pkg/servertesting"
 	"gopkg.in/guregu/null.v3"
+	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -31,6 +30,13 @@ func (ts *TaskServiceMock) UpdateTask(id uint, task *models.Task) (*models.Task,
 		return nil, ts.errorToThrow
 	}
 	return ts.task, nil
+}
+
+func (ts *TaskServiceMock) DeleteTask(id uint) error {
+	if ts.errorToThrow != nil {
+		return ts.errorToThrow
+	}
+	return nil
 }
 
 func (ts *TaskServiceMock) CreateTask(task *models.Task) (*models.Task, error) {
@@ -61,7 +67,6 @@ func TestTaskHandler_New(t *testing.T) {
 func TestTaskHandler_GetOneTaskHandler(t *testing.T) {
 	t.Run("should throw error if service is missing", panicErrorServiceMissing)
 	t.Run("should throw InternalServerError if service fails", internalErrorIfServiceFailsReturningTask)
-	t.Run("should throw an InternalServerError if id is invalid", failIfTaskIdIsInvalid)
 	t.Run("should throw a NotFound if service says so", notFoundIfServiceFoundsNothing)
 	t.Run("should return task returned by the service", returnTaskByService)
 }
@@ -72,55 +77,35 @@ func TestTaskHandler_GetTasksHandler(t *testing.T) {
 }
 
 func TestTaskHandler_UpdateTaskHandler(t *testing.T) {
-	t.Run("should throw error if id is invalid", updateTaskShouldFailIfTaskIdIsInvalid)
-	t.Run("should throw error if body is invalid", updateTaskShouldFailIfBodyIdIsInvalid)
-	t.Run("should throw error if json is invalid", updateTaskShouldFailIfJsonIdIsInvalid)
 	t.Run("should throw a NotFound if service says so", updateTaskShouldThrowNotFound)
 	t.Run("should throw InternalServer if some error is raised by the service", updateTaskShouldThrowIfServiceFails)
 	t.Run("should return task updated by the service", updateTaskShouldReturnUpdatedTask)
 }
 
 func TestTaskHandler_CreateTaskHandler(t *testing.T) {
-	t.Run("should throw error if body is invalid", createTaskShouldFailIfBodyIdIsInvalid)
-	t.Run("should throw error if json is invalid", createTaskShouldFailIfJsonIdIsInvalid)
 	t.Run("should throw InternalServer if some error is raised by the service", createTaskShouldThrowIfServiceFails)
 	t.Run("should return task created by the service", createTaskShouldReturnCreatedTask)
 }
 
 func panicErrorServiceMissing(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(httptest.NewRequest("GET", "/tasks/1", nil), map[string]string{
-		"id": "1",
-	})
+	context := servertesting.NewContext(
+		httptest.NewRequest("GET", "/tasks/1", nil),
+		httptest.NewRecorder(),
+		map[string]string{
+			"id": "1",
+		},
+	)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Errorf("function did not panic")
 		}
 	}()
-
-	_, _ = mock.GetOneTaskHandler(recorder, request)
-}
-
-func failIfTaskIdIsInvalid(t *testing.T) {
-	mock := &TaskHandlerMock{}
-	mock.taskService = &TaskServiceMock{}
-	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(httptest.NewRequest("GET", "/tasks/asd", nil), map[string]string{
-		"id": "asd",
-	})
-	res, err := mock.GetOneTaskHandler(recorder, request)
-	if res != nil {
-		t.Errorf("expected response to be nil, got %s", res)
-	}
-	if err != errors.InternalServerError {
-		t.Error("expected err to be an internal server error")
-	}
+	mock.GetOneTaskHandler(context)
 }
 
 func returnTaskByService(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
 	expected := &models.Task{
 		ID:          0,
 		Title:       "",
@@ -129,21 +114,28 @@ func returnTaskByService(t *testing.T) {
 	}
 	mock.taskService = &TaskServiceMock{task: expected}
 	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(httptest.NewRequest("GET", "/tasks/1", nil), map[string]string{
-		"id": "1",
-	})
-	if res, err := mock.GetOneTaskHandler(recorder, request); err == nil {
-		if res != expected {
-			t.Errorf("expected %+v got %+v", expected, res)
-		}
-	} else {
-		t.Errorf("expected %s to be nil", err)
+	context := servertesting.NewContext(
+		httptest.NewRequest("GET", "/tasks/1", nil),
+		recorder,
+		map[string]string{
+			"id": "1",
+		},
+	)
+	mock.GetOneTaskHandler(context)
+	var got *models.Task
+	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
+		t.Errorf("unmarshalling failed: %w %s", err, recorder.Body.String())
+	}
+	if *got != *expected {
+		t.Errorf("expected %+v got %+v", expected, got)
+	}
+	if recorder.Code != http.StatusOK {
+		t.Errorf("expected status code %d got %d", recorder.Code, http.StatusOK)
 	}
 }
 
 func returnTasksByService(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
 	expected := []models.Task{
 		{
 			ID:          0,
@@ -160,75 +152,86 @@ func returnTasksByService(t *testing.T) {
 	}
 	mock.taskService = &TaskServiceMock{tasks: expected}
 	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(httptest.NewRequest("GET", "/tasks", nil), map[string]string{})
-	if res, err := mock.GetTasksHandler(recorder, request); err == nil {
-		resValue := reflect.ValueOf(res)
-		if resValue.Kind() != reflect.Slice {
-			t.Errorf("expected %+v to be a slice", res)
-		}
-		if resValue.Len() != len(expected) {
-			t.Errorf("expected length of result (%d) to be %d", resValue.Len(), len(expected))
-		}
-	} else {
-		t.Errorf("expected %s to be nil", err)
+	context := servertesting.NewContext(
+		httptest.NewRequest("GET", "/tasks/1", nil),
+		recorder,
+		map[string]string{
+			"id": "1",
+		},
+	)
+	mock.GetTasksHandler(context)
+	var got []models.Task
+	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
+		t.Errorf("unmarshalling failed (%s): %w", recorder.Body.String(), err)
 	}
+	if len(got) != len(expected) {
+		t.Errorf("expected length of result (%d) to be %d", len(got), len(expected))
+	}
+
 }
 
 func internalErrorIfServiceFailsReturningTask(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
 	var expected *models.Task = nil
 	mock.taskService = &TaskServiceMock{
 		task:         expected,
 		errorToThrow: goErrors.New("test error"),
 	}
 	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(httptest.NewRequest("GET", "/tasks/1", nil), map[string]string{
-		"id": "1",
-	})
-	if res, err := mock.GetOneTaskHandler(recorder, request); err != nil {
-		if res != nil {
-			t.Errorf("expected %+v got %+v", expected, res)
-		}
-	} else {
-		t.Errorf("expected %s to not be nil", err)
+	context := servertesting.NewContext(
+		httptest.NewRequest("GET", "/tasks/1", nil),
+		recorder,
+		map[string]string{
+			"id": "1",
+		},
+	)
+	mock.GetOneTaskHandler(context)
+	if recorder.Code != 500 {
+		t.Errorf("expected status code to be 500 got %+v", recorder.Code)
+	}
+	if recorder.Body.Len() != 0 {
+		t.Errorf("expected length to be 0 got %+v (%s)", recorder.Body.Len(), recorder.Body.String())
 	}
 }
 
 func internalErrorIfServiceFailsReturningTasks(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
 	var expected []models.Task = nil
 	mock.taskService = &TaskServiceMock{
 		tasks:        expected,
 		errorToThrow: goErrors.New("test error"),
 	}
 	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(httptest.NewRequest("GET", "/tasks", nil), map[string]string{})
-	if res, err := mock.GetTasksHandler(recorder, request); err != nil {
-		if res != nil {
-			t.Errorf("expected nil got %+v", res)
-		}
-	} else {
-		t.Errorf("expected %s to not be nil", err)
+	context := servertesting.NewContext(
+		httptest.NewRequest("GET", "/tasks/1", nil),
+		recorder,
+		map[string]string{
+			"id": "1",
+		},
+	)
+	mock.GetTasksHandler(context)
+	if recorder.Body.Len() != 0 {
+		t.Errorf("expected length to be 0 got %+v", recorder.Body.Len())
+	}
+	if recorder.Code != http.StatusInternalServerError {
+		t.Errorf("expected status code to be %d got %d", http.StatusInternalServerError, recorder.Code)
 	}
 }
 
 func notFoundIfServiceFoundsNothing(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
 	mock.taskService = &TaskServiceMock{}
 	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(httptest.NewRequest("GET", "/tasks/1", nil), map[string]string{
-		"id": "1",
-	})
-	expected := errors.NotFound
-	if res, err := mock.GetOneTaskHandler(recorder, request); err != nil {
-		if err != expected {
-			t.Errorf("expected %+v got %+v", expected, res)
-		}
-	} else {
-		t.Errorf("expected %s to be nil", res)
+	context := servertesting.NewContext(
+		httptest.NewRequest("GET", "/tasks/1", nil),
+		recorder,
+		map[string]string{
+			"id": "1",
+		},
+	)
+	mock.GetOneTaskHandler(context)
+	if recorder.Code != http.StatusNotFound {
+		t.Errorf("expected %+v got %+v", http.StatusNotFound, recorder.Code)
 	}
 }
 
@@ -248,40 +251,41 @@ func shouldReturnConstructedHandler(t *testing.T) {
 
 func updateTaskShouldReturnUpdatedTask(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
-	task := createFakeTask()
+	expected := createFakeTask()
 	mock.taskService = &TaskServiceMock{
-		task:         task,
+		task:         expected,
 		errorToThrow: nil,
 	}
 	var taskJSON string
-	if marshallResult, err := json.Marshal(task); err == nil {
+	if marshallResult, err := json.Marshal(expected); err == nil {
 		taskJSON = string(marshallResult)
 	} else {
 		t.Errorf("error marshalling task %w", err)
 	}
 	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(
-		httptest.NewRequest("GET", "/tasks/1", strings.NewReader(taskJSON)),
+	context := servertesting.NewContext(
+		httptest.NewRequest("PUT", "/tasks/1", strings.NewReader(taskJSON)),
+		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	if got, err := mock.UpdateTaskHandler(recorder, request); err == nil {
-		if got == nil {
-			t.Errorf("expected result not to be nil")
-		}
-		if got != task {
-			t.Errorf("expected result to be %+v, got %+v", task, got)
-		}
-	} else {
-		t.Errorf("expected %s to be nil", err)
+	mock.UpdateTaskHandler(context)
+	var got *models.Task
+	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
+		t.Errorf("unmarshalling failed: %w", err)
 	}
+	if *got != *expected {
+		t.Errorf("expected %+v got %+v", expected, got)
+	}
+	if recorder.Code != http.StatusOK {
+		t.Errorf("expected status code %d got %d", recorder.Code, http.StatusOK)
+	}
+
 }
 
 func updateTaskShouldThrowIfServiceFails(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
 	task := createFakeTask()
 	errorToThrow := goErrors.New("test error")
 	mock.taskService = &TaskServiceMock{
@@ -295,106 +299,26 @@ func updateTaskShouldThrowIfServiceFails(t *testing.T) {
 		t.Errorf("error marshalling task %w", err)
 	}
 	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(
-		httptest.NewRequest("GET", "/tasks/1", strings.NewReader(taskJSON)),
+	context := servertesting.NewContext(
+		httptest.NewRequest("PUT", "/tasks/1", strings.NewReader(taskJSON)),
+		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	if got, err := mock.UpdateTaskHandler(recorder, request); err != nil {
-		if got != nil {
-			t.Errorf("expected result to be nil")
-		}
-		if err != errorToThrow {
-			t.Errorf("expected result to be %+v, got %+v", task, got)
-		}
-	} else {
-		t.Errorf("expected err not to be nil")
+	mock.UpdateTaskHandler(context)
+	if recorder.Body.Len() != 0 {
+		t.Errorf("expected length to be 0 got %+v", recorder.Body.Len())
 	}
+	if recorder.Code != http.StatusInternalServerError {
+		t.Errorf("expected status code to be %d got %d", http.StatusInternalServerError, recorder.Code)
+	}
+
 }
 
-func updateTaskShouldFailIfTaskIdIsInvalid(t *testing.T) {
-	mock := &TaskHandlerMock{}
-	mock.taskService = &TaskServiceMock{}
-	recorder := httptest.NewRecorder()
-	task := createFakeTask()
-	var taskJSON string
-	if marshallResult, err := json.Marshal(task); err == nil {
-		taskJSON = string(marshallResult)
-	} else {
-		t.Errorf("error marshalling task %w", err)
-	}
-
-	request := servertesting.NewRequest(httptest.NewRequest("PUT", "/tasks/asd", strings.NewReader(taskJSON)), map[string]string{
-		"id": "asd",
-	})
-	res, err := mock.UpdateTaskHandler(recorder, request)
-	if res != nil {
-		t.Errorf("expected response to be nil, got %s", res)
-	}
-	if err != errors.InternalServerError {
-		t.Error("expected err to be an internal server error")
-	}
-}
-
-func updateTaskShouldFailIfJsonIdIsInvalid(t *testing.T) {
-	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
-	taskJSON := "Invalid json;{{}"
-
-	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(
-		httptest.NewRequest("GET", "/tasks/1", strings.NewReader(taskJSON)),
-		map[string]string{
-			"id": "1",
-		},
-	)
-	if got, err := mock.UpdateTaskHandler(recorder, request); err != nil {
-		if got != nil {
-			t.Errorf("expected result to be nil")
-		}
-		if err != errors.BadRequest {
-			t.Errorf("expected error to be %+v, got %+v", errors.BadRequest, err)
-		}
-	} else {
-		t.Errorf("expected err not to be nil")
-	}
-}
-
-func updateTaskShouldFailIfBodyIdIsInvalid(t *testing.T) {
-	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
-	task := createFakeTask()
-	var taskJSON string
-	if marshallResult, err := json.Marshal(task); err == nil {
-		taskJSON = string(marshallResult)
-	} else {
-		t.Errorf("error marshalling task %w", err)
-	}
-	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(
-		httptest.NewRequest("GET", "/tasks/1", strings.NewReader(taskJSON)),
-		map[string]string{
-			"id": "1",
-		},
-	)
-	request.ThrowError = goErrors.New("error parsing body")
-	if got, err := mock.UpdateTaskHandler(recorder, request); err != nil {
-		if got != nil {
-			t.Errorf("expected result to be nil")
-		}
-		if err != errors.BadRequest {
-			t.Errorf("expected error to be %+v, got %+v", errors.BadRequest, err)
-		}
-	} else {
-		t.Errorf("expected err not to be nil")
-	}
-}
 func updateTaskShouldThrowNotFound(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
 	task := createFakeTask()
-	errorToThrow := errors.NotFound
 	mock.taskService = &TaskServiceMock{
 		task:         nil,
 		errorToThrow: nil,
@@ -406,54 +330,57 @@ func updateTaskShouldThrowNotFound(t *testing.T) {
 		t.Errorf("error marshalling task %w", err)
 	}
 	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(
-		httptest.NewRequest("GET", "/tasks/1", strings.NewReader(taskJSON)),
+	context := servertesting.NewContext(
+		httptest.NewRequest("PUT", "/tasks/1", strings.NewReader(taskJSON)),
+		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	if got, err := mock.UpdateTaskHandler(recorder, request); err != nil {
-		if got != nil {
-			t.Errorf("expected result to be nil")
-		}
-		if err != errorToThrow {
-			t.Errorf("expected result to be %+v, got %+v", task, got)
-		}
-	} else {
-		t.Errorf("expected err not to be nil")
+	mock.UpdateTaskHandler(context)
+
+	if recorder.Code != http.StatusNotFound {
+		t.Errorf("expected %+v got %+v", http.StatusNotFound, recorder.Code)
 	}
 }
 
 func createTaskShouldReturnCreatedTask(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
-	task := createFakeTask()
+	expected := createFakeTask()
 	mock.taskService = &TaskServiceMock{
-		task:         task,
+		task:         expected,
 		errorToThrow: nil,
 	}
 	var taskJSON string
-	if marshallResult, err := json.Marshal(task); err == nil {
+	if marshallResult, err := json.Marshal(expected); err == nil {
 		taskJSON = string(marshallResult)
 	} else {
 		t.Errorf("error marshalling task %w", err)
 	}
 	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(
-		httptest.NewRequest("GET", "/tasks/1", strings.NewReader(taskJSON)), map[string]string{},
+	context := servertesting.NewContext(
+		httptest.NewRequest("POST", "/tasks", strings.NewReader(taskJSON)),
+		recorder,
+		map[string]string{
+			"id": "1",
+		},
 	)
-	if got, err := mock.CreateTaskHandler(recorder, request); err == nil {
-		if got == nil {
-			t.Errorf("expected result not to be null")
-		}
-	} else {
-		t.Errorf("expected err to be nil, got %w", err)
+	mock.CreateTaskHandler(context)
+	var got *models.Task
+	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
+		t.Errorf("unmarshalling failed: %w", err)
+		return
+	}
+	if *got != *expected {
+		t.Errorf("expected %+v got %+v", expected, got)
+	}
+	if recorder.Code != http.StatusCreated {
+		t.Errorf("expected status code %d got %d", http.StatusCreated, recorder.Code)
 	}
 }
 
 func createTaskShouldThrowIfServiceFails(t *testing.T) {
 	mock := &TaskHandlerMock{}
-	mock.Server = servertesting.Initialize(&config.Config{})
 
 	task := createFakeTask()
 	var taskJSON string
@@ -468,27 +395,20 @@ func createTaskShouldThrowIfServiceFails(t *testing.T) {
 		errorToThrow: goErrors.New("test error"),
 	}
 	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(
-		httptest.NewRequest("POST", "/tasks", strings.NewReader(taskJSON)), map[string]string{},
+	context := servertesting.NewContext(
+		httptest.NewRequest("POST", "/tasks", strings.NewReader(taskJSON)),
+		recorder,
+		map[string]string{
+			"id": "1",
+		},
 	)
-	if got, err := mock.CreateTaskHandler(recorder, request); err != nil {
-		if got != nil {
-			t.Errorf("expected result to be nil")
-		}
-		if err != errors.InternalServerError {
-			t.Errorf("expected result to be %+v, got %+v", errors.InternalServerError, err)
-		}
-	} else {
-		t.Errorf("expected err not to be nil")
+	mock.CreateTaskHandler(context)
+	if recorder.Body.Len() != 0 {
+		t.Errorf("expected length to be 0 got %+v", recorder.Body.Len())
 	}
-}
-
-func createTaskShouldFailIfJsonIdIsInvalid(t *testing.T) {
-
-}
-
-func createTaskShouldFailIfBodyIdIsInvalid(t *testing.T) {
-
+	if recorder.Code != http.StatusInternalServerError {
+		t.Errorf("expected status code to be %d got %d", http.StatusInternalServerError, recorder.Code)
+	}
 }
 
 func createFakeTask() *models.Task {
@@ -497,6 +417,6 @@ func createFakeTask() *models.Task {
 		Title:       faker.Sentence(),
 		Description: null.NewString(faker.Sentence(), true),
 		Completed:   false,
-		Date:        null.NewTime(time.Now(), true),
+		Date:        null.NewTime(time.Now().Round(time.Nanosecond), true),
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/bxcodec/faker/v3"
 	"github.com/jmoiron/sqlx"
-	"github.com/jopicornell/go-rest-api/pkg/models"
+	"github.com/jopicornell/go-rest-api/internals/models"
 	"gopkg.in/guregu/null.v3"
 	"reflect"
 	"testing"

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/jmoiron/sqlx"
-	"github.com/jopicornell/go-rest-api/pkg/models"
+	"github.com/jopicornell/go-rest-api/internals/models"
 )
 
 type TaskService interface {
@@ -12,6 +12,7 @@ type TaskService interface {
 	GetTask(uint) (*models.Task, error)
 	UpdateTask(uint, *models.Task) (*models.Task, error)
 	CreateTask(*models.Task) (*models.Task, error)
+	DeleteTask(uint) error
 }
 
 type taskService struct {
@@ -71,10 +72,7 @@ func (s *taskService) UpdateTask(id uint, task *models.Task) (*models.Task, erro
 		return nil, TaskNullError
 	}
 	updateQuery := "UPDATE tasks SET title=?, description=?, completed=? where task_id = ?"
-	tx, err := s.db.Beginx()
-	if err != nil {
-		return nil, err
-	}
+	tx := s.db.MustBegin()
 	if _, err := tx.Exec(updateQuery, task.Title, task.Description, task.Completed, task.ID); err == nil {
 		err = tx.Commit()
 		return task, err
@@ -88,10 +86,11 @@ func (s *taskService) UpdateTask(id uint, task *models.Task) (*models.Task, erro
 }
 
 func (s *taskService) DeleteTask(id uint) (err error) {
-	deleteQuery := "DELETE FROM tasks WHERE id = ?"
-	tx, err := s.db.Beginx()
-	if _, err := tx.Exec(deleteQuery); err == nil {
+	deleteQuery := "DELETE FROM tasks WHERE task_id = ?"
+	tx := s.db.MustBegin()
+	if _, err := tx.Exec(deleteQuery, id); err == nil {
 		err = tx.Commit()
+		return err
 	} else {
 		errRollback := tx.Rollback()
 		if errRollback != nil {

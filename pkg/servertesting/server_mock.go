@@ -47,11 +47,11 @@ func (s *ServerMock) GetRelationalDatabase() *sqlx.DB {
 }
 
 func (s *ServerMock) AddApiRoute(path string, handler server.HandlerFunc) *mux.Route {
-	return s.ApiRouter.HandleFunc(path, server.HandleJSONResponse(handler))
+	return s.ApiRouter.HandleFunc(path, server.HandleHTTP(handler))
 }
 
 func (s *ServerMock) AddRoute(path string, handler server.HandlerFunc) *mux.Route {
-	return s.Router.HandleFunc(path, server.HandleJSONResponse(handler))
+	return s.Router.HandleFunc(path, server.HandleHTTP(handler))
 }
 
 func (s *ServerMock) AddStatics(exposePath string, staticPath string) {
@@ -59,10 +59,6 @@ func (s *ServerMock) AddStatics(exposePath string, staticPath string) {
 	staticPath = path.Join(basePath, staticPath)
 	fileServer := http.FileServer(http.Dir(staticPath))
 	s.Router.PathPrefix(exposePath).Handler(http.StripPrefix(exposePath, fileServer))
-}
-
-func (s *ServerMock) AddRouteWithSerializerFunc(path string, handler server.HandlerFunc, serializer server.HandlerSerializer) {
-	s.Router.HandleFunc(path, serializer(handler))
 }
 
 func (s ServerMock) ListenAndServe() {

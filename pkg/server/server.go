@@ -24,10 +24,9 @@ func Initialize() Server {
 type Server interface {
 	Close()
 	GetRelationalDatabase() *sqlx.DB
-	AddApiRoute(path string, handler HandlerFunc, statusCode int) *mux.Route
+	AddApiRoute(path string, handler HandlerFunc) *mux.Route
 	AddRoute(string, HandlerFunc) *mux.Route
 	AddStatics(string, string)
-	AddRouteWithSerializerFunc(string, HandlerFunc, HandlerSerializer)
 	ListenAndServe()
 }
 
@@ -46,12 +45,12 @@ func (s *server) GetRelationalDatabase() *sqlx.DB {
 	return s.relationalDB.GetDB()
 }
 
-func (s *server) AddApiRoute(path string, handler HandlerFunc, statusCode int) *mux.Route {
-	return s.ApiRouter.HandleFunc(path, HandleJSONResponse(handler, statusCode))
+func (s *server) AddApiRoute(path string, handler HandlerFunc) *mux.Route {
+	return s.ApiRouter.HandleFunc(path, HandleHTTP(handler))
 }
 
 func (s *server) AddRoute(path string, handler HandlerFunc) *mux.Route {
-	return s.Router.HandleFunc(path, HandleJSONResponse(handler, 200))
+	return s.Router.HandleFunc(path, HandleHTTP(handler))
 }
 
 func (s *server) AddStatics(exposePath string, staticPath string) {
@@ -59,10 +58,6 @@ func (s *server) AddStatics(exposePath string, staticPath string) {
 	staticPath = path.Join(basePath, staticPath)
 	fileServer := http.FileServer(http.Dir(staticPath))
 	s.Router.PathPrefix(exposePath).Handler(http.StripPrefix(exposePath, fileServer))
-}
-
-func (s *server) AddRouteWithSerializerFunc(path string, handler HandlerFunc, serializer HandlerSerializer) {
-	s.Router.HandleFunc(path, serializer(handler))
 }
 
 func (s server) ListenAndServe() {

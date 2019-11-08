@@ -1,15 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/jopicornell/go-rest-api/internals/api/tasks/services"
-	"github.com/jopicornell/go-rest-api/internals/errors"
-	"github.com/jopicornell/go-rest-api/pkg/models"
+	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/pkg/server"
 	"log"
 	"net/http"
-	"strconv"
 )
 
 type TaskHandler struct {
@@ -23,95 +20,65 @@ func New(s server.Server) *TaskHandler {
 	}
 }
 
-func (s *TaskHandler) GetTasksHandler(w http.ResponseWriter, _ server.Request) (interface{}, error) {
+func (s *TaskHandler) GetTasksHandler(context server.Context) {
 	tasks, err := s.taskService.GetTasks()
 	if err != nil {
 		log.Println(fmt.Errorf("error getting tasks: %w", err))
-		return nil, errors.InternalServerError
+		context.Respond(http.StatusInternalServerError)
+		return
 	}
-	return tasks, nil
+	context.RespondJSON(http.StatusOK, tasks)
 }
 
-func (s *TaskHandler) GetOneTaskHandler(_ http.ResponseWriter, r server.Request) (interface{}, error) {
-	id, err := strconv.Atoi(r.GetPathParameters()["id"])
-	if err != nil {
-		log.Println(fmt.Errorf("error converting id: %s to integer", r.GetPathParameters()["id"]))
-		return nil, errors.InternalServerError
-	}
+func (s *TaskHandler) GetOneTaskHandler(context server.Context) {
+	id := context.GetParamUInt("id")
 	task, err := s.taskService.GetTask(uint(id))
 	if err != nil {
 		log.Println(fmt.Errorf("error getting task(%d): %w", id, err))
-		return nil, err
+		context.Respond(http.StatusInternalServerError)
+		return
 	}
 	if task == nil {
-		return nil, errors.NotFound
+		context.Respond(http.StatusNotFound)
+		return
 	}
-	return task, nil
+	context.RespondJSON(http.StatusOK, task)
 }
 
-func (s *TaskHandler) UpdateTaskHandler(_ http.ResponseWriter, r server.Request) (interface{}, error) {
-	id, err := strconv.Atoi(r.GetPathParameters()["id"])
-	if err != nil {
-		log.Println(fmt.Errorf("error converting id: %s to integer", r.GetPathParameters()["id"]))
-		return nil, errors.InternalServerError
-	}
+func (s *TaskHandler) UpdateTaskHandler(context server.Context) {
+	id := context.GetParamUInt("id")
 	var task *models.Task
-	body, err := r.GetBody()
-	if err != nil {
-		return nil, errors.BadRequest
-	}
-	err = json.Unmarshal(body, &task)
-	if err != nil {
-		return nil, errors.BadRequest
-	}
-	task, err = s.taskService.UpdateTask(uint(id), task)
+	context.GetBodyMarshalled(&task)
+	task, err := s.taskService.UpdateTask(uint(id), task)
 	if err != nil {
 		log.Println(fmt.Errorf("error getting task(%d): %w", id, err))
-		return nil, err
+		context.Respond(http.StatusInternalServerError)
+		return
 	}
 	if task == nil {
-		return nil, errors.NotFound
+		context.Respond(http.StatusNotFound)
+		return
 	}
-	return task, nil
+	context.RespondJSON(http.StatusOK, task)
 }
 
-func (s *TaskHandler) CreateTaskHandler(_ http.ResponseWriter, r server.Request) (interface{}, error) {
+func (s *TaskHandler) CreateTaskHandler(context server.Context) {
 	var task *models.Task
-	body, err := r.GetBody()
-	if err != nil {
-		return nil, errors.BadRequest
-	}
-	err = json.Unmarshal(body, &task)
-	if err != nil {
-		return nil, errors.BadRequest
-	}
-	if res, err := s.taskService.CreateTask(task); err == nil {
-		return res, nil
+	context.GetBodyMarshalled(&task)
+	if task, err := s.taskService.CreateTask(task); err == nil {
+		context.RespondJSON(http.StatusCreated, task)
 	} else {
 		log.Println(fmt.Errorf("error creating task %+v: %w", task, err))
-		return nil, errors.InternalServerError
+		context.Respond(http.StatusInternalServerError)
 	}
 }
 
-func (s *TaskHandler) DeleteTaskHandler(_ http.ResponseWriter, r server.Request) (interface{}, error) {
-	id, err := strconv.Atoi(r.GetPathParameters()["id"])
-	if err != nil {
-		log.Println(fmt.Errorf("error converting id: %s to integer", r.GetPathParameters()["id"]))
-		return nil, errors.InternalServerError
-	}
-	var task *models.Task
-	body, err := r.GetBody()
-	if err != nil {
-		return nil, errors.BadRequest
-	}
-	err = json.Unmarshal(body, &task)
-	if err != nil {
-		return nil, errors.BadRequest
-	}
-	if res, err := s.taskService.DeleteTask(uint(id)); err == nil {
-		return res, nil
+func (s *TaskHandler) DeleteTaskHandler(context server.Context) {
+	id := context.GetParamUInt("id")
+	if err := s.taskService.DeleteTask(uint(id)); err == nil {
+		context.Respond(http.StatusOK)
 	} else {
-		log.Println(fmt.Errorf("error creating task %+v: %w", task, err))
-		return nil, errors.InternalServerError
+		log.Println(fmt.Errorf("error deleting task %d: %w", id, err))
+		context.Respond(http.StatusInternalServerError)
 	}
 }

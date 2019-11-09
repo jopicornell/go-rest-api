@@ -1,8 +1,6 @@
 package services
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/bxcodec/faker/v3"
 	"github.com/gbrlsnchs/jwt/v3"
@@ -11,6 +9,7 @@ import (
 	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/pkg/config"
 	"github.com/jopicornell/go-rest-api/pkg/servertesting"
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/guregu/null.v3"
 	"reflect"
 	"testing"
@@ -30,8 +29,15 @@ func TestNew(t *testing.T) {
 }
 
 func TestAuthService_Login(t *testing.T) {
-	t.Run("login should return error when user+password pair don't match", loginErrorNoMatch)
-	t.Run("login should return jwt when user+password pair match", loginReturnJWT)
+	t.Run("should return error when user+password pair don't match", loginErrorNoMatch)
+	t.Run("should return jwt when user+password pair match", loginReturnJWT)
+}
+
+func TestAuthService_Register(t *testing.T) {
+	t.Run("should return error when weak password is provided", registerWeakPassword)
+	t.Run("should return error when incorrect mail is provided", registerIncorrectMail)
+	t.Run("should return error when email exists", registerMailExists)
+	t.Run("should insert into database and return user when registered correctly", registerSuccessAndReturnUser)
 }
 
 func loginErrorNoMatch(t *testing.T) {
@@ -39,12 +45,10 @@ func loginErrorNoMatch(t *testing.T) {
 	authService := New(mockedDb, servertesting.Initialize(&config.Config{}))
 	user := "user"
 	password := "password"
-	queryToRun := "SELECT id, name, email, user_name, active, deleted_at " +
-		"FROM users WHERE sha2\\(concat\\(first_name, last_name\\), 256\\) = \\?"
+	queryToRun := "SELECT id, name, email, active, deleted_at " +
+		"FROM users WHERE email = \\?"
 	mock.ExpectQuery(queryToRun).WillReturnRows(&sqlmock.Rows{})
-	hasher := sha256.New()
-	tokenizedRequest := base64.URLEncoding.EncodeToString(hasher.Sum([]byte(user + password)))
-	if got, err := authService.Login(string(tokenizedRequest)); err != nil {
+	if got, err := authService.Login(user, password); err != nil {
 		if got != nil {
 			t.Errorf("expected return %+v to be nil", got)
 		}
@@ -62,14 +66,12 @@ func loginReturnJWT(t *testing.T) {
 	authService := New(mockedDb, mockedServer)
 	user := "user"
 	password := "password"
-	queryToRun := "SELECT id, name, email, user_name, active, deleted_at " +
-		"FROM users WHERE sha2\\(concat\\(first_name, last_name\\), 256\\) = \\?"
-	rows := buildUserRows()
-	_ = addUserRows(rows, 1)
+	queryToRun := "SELECT id, name, email, active, deleted_at " +
+		"FROM users WHERE email = \\?"
+	rows := buildUserRows(true)
+	_ = addUserRows(rows, []byte(password), 1)
 	mock.ExpectQuery(queryToRun).WillReturnRows(rows)
-	hasher := sha256.New()
-	tokenizedRequest := base64.URLEncoding.EncodeToString(hasher.Sum([]byte(user + password)))
-	if got, err := authService.Login(string(tokenizedRequest)); err == nil {
+	if got, err := authService.Login(user, password); err == nil {
 		if got == nil {
 			t.Errorf("expected return not to be nil")
 		}
@@ -88,6 +90,41 @@ func validateJWT(token string, secret string) error {
 	return err
 }
 
+func registerSuccessAndReturnUser(t *testing.T) {
+	mockedDb, mock := mockDB(t)
+	mockedServer := servertesting.Initialize(&config.Config{})
+	authService := New(mockedDb, mockedServer)
+	mock.ExpectBegin()
+	insertQuery := "INSERT INTO users \\(name, email, password, active\\) VALUES " +
+		"\\(\\?, \\?, \\?, \\?\\)"
+	mock.ExpectExec(insertQuery).WillReturnResult(sqlmock.NewResult(0, 0))
+	rows := buildUserRows(false)
+	users := addUserRows(rows, nil, 1)
+	queryToRun := "SELECT id, name, email, active, deleted_at " +
+		"FROM users WHERE id = LAST_INSERT_ID()"
+	mock.ExpectQuery(queryToRun).WillReturnRows(rows)
+	mock.ExpectCommit()
+	if got, err := authService.Register(users[0]); err == nil {
+		if !reflect.DeepEqual(*got, users[0]) {
+			t.Errorf("expected return user %+v to be %+v", got, &users[0])
+		}
+	} else {
+		t.Errorf("expected err %+v not to be nul", err)
+	}
+}
+
+func registerMailExists(t *testing.T) {
+
+}
+
+func registerIncorrectMail(t *testing.T) {
+
+}
+
+func registerWeakPassword(t *testing.T) {
+
+}
+
 func mockDB(t *testing.T) (*sqlx.DB, sqlmock.Sqlmock) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -96,32 +133,49 @@ func mockDB(t *testing.T) (*sqlx.DB, sqlmock.Sqlmock) {
 	return sqlx.NewDb(db, "sqlmock"), mock
 }
 
-func buildUserRows() *sqlmock.Rows {
-	return sqlmock.NewRows([]string{"id", "name", "email", "user_name", "active", "deleted_at"})
+func buildUserRows(withPassword bool) *sqlmock.Rows {
+	if withPassword {
+		return sqlmock.NewRows([]string{"id", "name", "password", "email", "active", "deleted_at"})
+	}
+	return sqlmock.NewRows([]string{"id", "name", "email", "active", "deleted_at"})
 }
 
-func addUserRows(rows *sqlmock.Rows, numRows uint) []models.User {
+func addUserRows(rows *sqlmock.Rows, password []byte, numRows uint) []models.User {
 	var users []models.User
 	var user *models.User
 	for ; numRows > 0; numRows-- {
-		user = createFakeUser()
-
+		user = createFakeUser(password)
 		users = append(users, *user)
-		rows.AddRow(user.ID, user.Name, user.Email, user.UserName, user.Active, user.DeletedAt)
+		if password == nil {
+			rows.AddRow(user.ID, user.Name, user.Email, user.Active, user.DeletedAt)
+		} else {
+			rows.AddRow(user.ID, user.Name, user.Password, user.Email, user.Active, user.DeletedAt)
+		}
 	}
 	return users
 }
 
-func createFakeUser() *models.User {
-	return &models.User{
-		ID:       uint(faker.UnixTime()),
-		Email:    faker.Email(),
-		Name:     faker.Name(),
-		UserName: faker.Username(),
-		Active:   true,
+func createFakeUser(password []byte) (user *models.User) {
+	user = &models.User{
+		ID:     uint(faker.UnixTime()),
+		Email:  faker.Email(),
+		Name:   faker.Name(),
+		Active: true,
 		DeletedAt: null.Time{
 			Time:  time.Now().Round(time.Nanosecond),
 			Valid: true,
 		},
+	}
+	if password != nil {
+		user.Password = generatePasswordBcrypt(password)
+	}
+	return user
+}
+
+func generatePasswordBcrypt(password []byte) []byte {
+	if password, err := bcrypt.GenerateFromPassword(password, 10); err == nil {
+		return password
+	} else {
+		panic(err)
 	}
 }

@@ -12,5 +12,6 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/joho/godotenv v1.3.0
 	github.com/pkg/errors v0.8.1
+	golang.org/x/crypto v0.0.0-20190927123631-a832865fa7ad
 	gopkg.in/guregu/null.v3 v3.4.0
 )

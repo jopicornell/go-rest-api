@@ -7,11 +7,13 @@ import (
 	"github.com/jopicornell/go-rest-api/internals/errors"
 	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/pkg/server"
+	"golang.org/x/crypto/bcrypt"
 	"strconv"
 )
 
 type AuthService interface {
-	Login(tokenizedRequest string) (*models.Token, error)
+	Login(email string, password string) (*models.Token, error)
+	Register(user models.User) (*models.User, error)
 }
 
 type authService struct {
@@ -26,11 +28,14 @@ func New(db *sqlx.DB, server server.Server) AuthService {
 	}
 }
 
-func (s *authService) Login(tokenizedRequest string) (token *models.Token, err error) {
-	query := "SELECT id, name, email, user_name, active, deleted_at FROM users " +
-		"WHERE sha2(concat(first_name, last_name), 256) = ?"
+func (s *authService) Login(email string, password string) (token *models.Token, err error) {
+	query := "SELECT id, name, email, active, deleted_at FROM users " +
+		"WHERE email = ?"
 	var user models.User
-	if err := s.db.Get(&user, query, tokenizedRequest); err == nil {
+	if err := s.db.Get(&user, query, email); err == nil {
+		if err := bcrypt.CompareHashAndPassword(user.Password, []byte(password)); err != nil {
+			return nil, errors.AuthUserNotMatched
+		}
 		var hs = jwt.NewHS512([]byte(s.server.GetServerConfig().JWTSecret))
 		token, err := jwt.Sign(configurePayload(user.ID), hs)
 		if err != nil {
@@ -43,6 +48,22 @@ func (s *authService) Login(tokenizedRequest string) (token *models.Token, err e
 		}
 		return nil, err
 	}
+}
+
+func (s *authService) Register(user models.User) (_ *models.User, err error) {
+	tx := s.db.MustBegin()
+	insertStatement := "INSERT INTO users (name, email, password, active) VALUES (?, ?, ?, ?)"
+	if _, err = tx.Exec(insertStatement, user.Name, user.Email, user.Password, true); err == nil {
+		queryToRun := "SELECT id, name, email, active, deleted_at " +
+			"FROM users WHERE id = LAST_INSERT_ID()"
+		var user models.User
+		if err = tx.Get(&user, queryToRun); err == nil {
+			if err = tx.Commit(); err == nil {
+				return &user, nil
+			}
+		}
+	}
+	return nil, err
 }
 
 func configurePayload(userId uint) models.JwtUserPayload {

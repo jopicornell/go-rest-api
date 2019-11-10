@@ -2,8 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -52,6 +54,7 @@ func (r *context) GetBody() []byte {
 
 func (r *context) GetBodyMarshalled(ifc interface{}) {
 	if err := json.Unmarshal(r.GetBody(), ifc); err != nil {
+		log.Println(fmt.Sprintf("error unmarshalling: %s", err))
 		r.Respond(http.StatusBadRequest)
 	}
 }

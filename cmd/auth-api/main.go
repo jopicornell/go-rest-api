@@ -1,7 +1,9 @@
 package main
 
-import "github.com/jopicornell/go-rest-api/internals/api/tasks"
+import (
+	"github.com/jopicornell/go-rest-api/internals/api/auth"
+)
 
 func main() {
-	tasks.Start()
+	auth.Start()
 }

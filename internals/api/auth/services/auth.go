@@ -29,7 +29,7 @@ func New(db *sqlx.DB, server server.Server) AuthService {
 }
 
 func (s *authService) Login(email string, password string) (token *models.Token, err error) {
-	query := "SELECT id, name, email, active, deleted_at FROM users " +
+	query := "SELECT id, name, password, email, active, deleted_at FROM users " +
 		"WHERE email = ?"
 	var user models.User
 	if err := s.db.Get(&user, query, email); err == nil {

@@ -45,7 +45,7 @@ func loginErrorNoMatch(t *testing.T) {
 	authService := New(mockedDb, servertesting.Initialize(&config.Config{}))
 	user := "user"
 	password := "password"
-	queryToRun := "SELECT id, name, email, active, deleted_at " +
+	queryToRun := "SELECT id, name, password, email, active, deleted_at " +
 		"FROM users WHERE email = \\?"
 	mock.ExpectQuery(queryToRun).WillReturnRows(&sqlmock.Rows{})
 	if got, err := authService.Login(user, password); err != nil {
@@ -66,7 +66,7 @@ func loginReturnJWT(t *testing.T) {
 	authService := New(mockedDb, mockedServer)
 	user := "user"
 	password := "password"
-	queryToRun := "SELECT id, name, email, active, deleted_at " +
+	queryToRun := "SELECT id, name, password, email, active, deleted_at " +
 		"FROM users WHERE email = \\?"
 	rows := buildUserRows(true)
 	_ = addUserRows(rows, []byte(password), 1)

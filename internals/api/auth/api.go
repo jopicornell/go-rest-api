@@ -1,4 +1,4 @@
-package tasks
+package auth
 
 import (
 	server "github.com/jopicornell/go-rest-api/pkg/server"

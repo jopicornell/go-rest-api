@@ -7,5 +7,7 @@ import (
 
 func ConfigureRoutes(s server.Server) {
 	handler := handlers.New(s)
+
 	s.AddApiRoute("/login", handler.Login).Methods("POST")
+	s.AddApiRoute("/validate", handler.Login).Methods("POST")
 }

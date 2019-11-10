@@ -27,6 +27,7 @@ type Server interface {
 	GetServerConfig() *config.Server
 	AddApiRoute(path string, handler HandlerFunc) *mux.Route
 	AddRoute(string, HandlerFunc) *mux.Route
+	AddSubRouter(subRouter string) *mux.Router
 	AddStatics(string, string)
 	ListenAndServe()
 }
@@ -48,6 +49,10 @@ func (s *server) GetRelationalDatabase() *sqlx.DB {
 
 func (s *server) AddApiRoute(path string, handler HandlerFunc) *mux.Route {
 	return s.ApiRouter.HandleFunc(path, HandleHTTP(handler))
+}
+
+func (s *server) AddSubRouter(path string) *mux.Router {
+	return s.ApiRouter.PathPrefix(path).Subrouter()
 }
 
 func (s *server) AddRoute(path string, handler HandlerFunc) *mux.Route {

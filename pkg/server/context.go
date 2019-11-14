@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/jopicornell/go-rest-api/internals/models"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,12 +15,14 @@ type context struct {
 	Request        *http.Request
 	ResponseWriter http.ResponseWriter
 	PathParameters map[string]string
+	user           *models.User
 }
 
 type Context interface {
 	GetPathParameters() map[string]string
 	GetParamUInt(param string) uint
 	GetRequest() *http.Request
+	GetUser() *models.User
 	GetWriter() http.ResponseWriter
 	GetBody() []byte
 	GetBodyMarshalled(interface{})
@@ -41,6 +44,10 @@ func (r *context) GetRequest() *http.Request {
 
 func (r *context) GetWriter() http.ResponseWriter {
 	return r.ResponseWriter
+}
+
+func (r *context) GetUser() *models.User {
+	return r.user
 }
 
 func (r *context) GetBody() []byte {

@@ -1,8 +1,8 @@
 package server
 
 import (
+	goContext "context"
 	"fmt"
-	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/jopicornell/go-rest-api/pkg/config"
 	"github.com/jopicornell/go-rest-api/pkg/database"
@@ -10,35 +10,44 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"time"
 )
 
 func Initialize() Server {
 	server := &server{}
 	server.Config.Bootstrap()
 	server.initializeRelationalDatabase()
-	server.Router = mux.NewRouter().StrictSlash(true)
-	server.ApiRouter = server.Router.PathPrefix(server.GetServerConfig().ApiUrl).Subrouter()
+	server.Router = NewRouter()
+	server.Server = http.Server{
+		Addr:    ":" + server.GetServerConfig().Port,
+		Handler: server,
+	}
 	return server
 }
 
 type Server interface {
+	http.Handler
 	Close()
 	GetRelationalDatabase() *sqlx.DB
 	GetServerConfig() *config.Server
-	AddApiRoute(path string, handler HandlerFunc) *mux.Route
-	AddRoute(string, HandlerFunc) *mux.Route
+	GetRouter() Router
 	AddStatics(string, string)
 	ListenAndServe()
 }
 
 type server struct {
+	http.Server
 	config.Config
 	relationalDB *database.MySQL
-	Router       *mux.Router
-	ApiRouter    *mux.Router
+	Router       Router
 }
 
 func (s *server) Close() {
+	go func() {
+		if err := s.Server.Shutdown(goContext.TODO()); err != nil {
+			panic("panicking" + err.Error())
+		}
+	}()
 	log.Fatal(s.relationalDB.GetDB().Close())
 }
 
@@ -46,23 +55,28 @@ func (s *server) GetRelationalDatabase() *sqlx.DB {
 	return s.relationalDB.GetDB()
 }
 
-func (s *server) AddApiRoute(path string, handler HandlerFunc) *mux.Route {
-	return s.ApiRouter.HandleFunc(path, HandleHTTP(handler))
-}
-
-func (s *server) AddRoute(path string, handler HandlerFunc) *mux.Route {
-	return s.Router.HandleFunc(path, HandleHTTP(handler))
-}
-
 func (s *server) AddStatics(exposePath string, staticPath string) {
 	basePath, _ := filepath.Abs("./")
 	staticPath = path.Join(basePath, staticPath)
 	fileServer := http.FileServer(http.Dir(staticPath))
-	s.Router.PathPrefix(exposePath).Handler(http.StripPrefix(exposePath, fileServer))
+	s.Router.GetInnerRouter().PathPrefix(exposePath).Handler(http.StripPrefix(exposePath, fileServer))
+}
+
+func (s *server) GetRouter() Router {
+	return s.Router
 }
 
 func (s server) ListenAndServe() {
-	log.Panic(http.ListenAndServe(fmt.Sprintf(":%s", s.GetServerConfig().Port), s.Router))
+	if err := s.Server.ListenAndServe(); err != http.ErrServerClosed {
+		log.Fatalf("Listen and Server Error: %s", err)
+	}
+}
+
+func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	s.Router.GetInnerRouter().ServeHTTP(w, r)
+	duration := time.Now().Sub(start)
+	println(fmt.Sprintf("Request %s %s took %s", r.Method, r.RequestURI, duration.String()))
 }
 
 func (s *server) initializeRelationalDatabase() *sqlx.DB {

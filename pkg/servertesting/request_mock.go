@@ -2,6 +2,8 @@ package servertesting
 
 import (
 	"encoding/json"
+	"github.com/jopicornell/go-rest-api/internals/models"
+	"gopkg.in/guregu/null.v3"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -20,6 +22,7 @@ type ContextMock struct {
 	PathParameters map[string]string
 	ResponseWriter http.ResponseWriter
 	ThrowError     error
+	User           *models.User
 }
 
 func (r *ContextMock) GetRequest() *http.Request {
@@ -37,6 +40,10 @@ func (r *ContextMock) GetBody() []byte {
 		r.Respond(http.StatusBadRequest)
 		return nil
 	}
+}
+
+func (r *ContextMock) GetUser() *models.User {
+	return r.User
 }
 
 func (r *ContextMock) GetBodyMarshalled(ifc interface{}) {
@@ -72,4 +79,17 @@ func (r *ContextMock) RespondJSON(statusCode int, ifc interface{}) {
 
 func (r *ContextMock) Respond(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
+}
+
+func CreateFakeUser() *models.User {
+	return &models.User{
+		ID:        10,
+		Name:      "name",
+		Password:  []byte("hashedPassword"),
+		Email:     "email@test.test",
+		Active:    true,
+		CreatedAt: null.Time{},
+		UpdatedAt: null.Time{},
+		DeletedAt: null.Time{},
+	}
 }

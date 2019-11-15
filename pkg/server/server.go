@@ -66,7 +66,7 @@ func (s *server) GetRouter() Router {
 	return s.Router
 }
 
-func (s server) ListenAndServe() {
+func (s *server) ListenAndServe() {
 	if err := s.Server.ListenAndServe(); err != http.ErrServerClosed {
 		log.Fatalf("Listen and Server Error: %s", err)
 	}

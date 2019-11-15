@@ -50,7 +50,7 @@ func (s *appointmentService) CreateAppointment(appointment *models.Appointment, 
 	if appointment == nil {
 		return nil, AppointmentNullError
 	}
-	insertQuery := "INSERT INTO appointments (id, start_date, duration, end_date, status, user_id) VALUES (?, ?, ?, 0)"
+	insertQuery := "INSERT INTO appointments (start_date, duration, end_date, status, user_id) VALUES (?, ?, ?, ?, ?)"
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (s *appointmentService) UpdateAppointment(id uint, appointment *models.Appo
 	}
 	updateQuery := "UPDATE appointments SET start_date=?, duration=?, end_date=?, status=? where id = ?"
 	tx := s.db.MustBegin()
-	if _, err := tx.Exec(updateQuery, appointment.StartDate, appointment.Duration, appointment.EndDate, appointment.ID); err == nil {
+	if _, err := tx.Exec(updateQuery, appointment.StartDate, appointment.Duration, appointment.EndDate, appointment.Status, appointment.ID); err == nil {
 		err = tx.Commit()
 		return appointment, err
 	} else {

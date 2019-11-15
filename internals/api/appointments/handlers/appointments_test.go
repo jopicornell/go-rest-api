@@ -128,8 +128,8 @@ func returnAppointmentByService(t *testing.T) {
 	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
 		t.Errorf("unmarshalling failed: %w %s", err, recorder.Body.String())
 	}
-	if reflect.DeepEqual(got, expected) {
-		t.Errorf("expected %+v got %+v", expected, got)
+	if !reflect.DeepEqual(*got, *expected) {
+		t.Errorf("expected %+v got %+v", *expected, *got)
 	}
 	if recorder.Code != http.StatusOK {
 		t.Errorf("expected status code %d got %d", recorder.Code, http.StatusOK)
@@ -281,7 +281,7 @@ func updateAppointmentShouldReturnUpdatedAppointment(t *testing.T) {
 	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
 		t.Errorf("unmarshalling failed: %w", err)
 	}
-	if reflect.DeepEqual(*got, *expected) {
+	if !reflect.DeepEqual(*got, *expected) {
 		t.Errorf("expected %+v got %+v", expected, got)
 	}
 	if recorder.Code != http.StatusOK {

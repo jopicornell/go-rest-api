@@ -14,6 +14,7 @@ type router struct {
 type Router interface {
 	AddGroup(path string) Router
 	AddRoute(path string, handler HandlerFunc) *mux.Route
+	Use(...mux.MiddlewareFunc)
 	GetInnerRouter() *mux.Router
 	AddStatics(exposePath string, staticPath string)
 }
@@ -28,6 +29,10 @@ func (r *router) AddGroup(path string) Router {
 
 func (r *router) AddRoute(path string, handler HandlerFunc) *mux.Route {
 	return r.router.HandleFunc(path, HandleHTTP(handler))
+}
+
+func (r *router) Use(middlewares ...mux.MiddlewareFunc) {
+	r.router.Use(middlewares...)
 }
 
 func (r *router) AddStatics(exposePath string, staticPath string) {

@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-type HandlerFunc func(Context)
+type HandlerFunc func(Request)
 
 type Handler struct {
 	http.Handler
@@ -13,6 +13,6 @@ type Handler struct {
 
 func HandleHTTP(handler HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		handler(NewContext(r, w))
+		handler(NewRequest(r, w))
 	}
 }

@@ -7,6 +7,6 @@ import (
 
 func ConfigureRoutes(s server.Server) {
 	handler := handlers.New(s)
-	group := s.GetRouter().AddGroup("/api")
+	group := s.GetRouter()
 	group.AddRoute("/login", handler.Login).Methods("POST")
 }

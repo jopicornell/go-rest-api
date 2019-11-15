@@ -163,7 +163,7 @@ func createAppointmentShouldReturnAppointmentAndCommit(t *testing.T) {
 	user := servertesting.CreateFakeUser()
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO appointments (.*)").WithArgs(
-		appointment.StartDate, appointment.Duration, appointment.EndDate, appointment.Status, appointment.UserId,
+		appointment.StartDate, appointment.Duration, appointment.EndDate, appointment.Status, user.ID,
 	).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 	if got, err := appointmentService.CreateAppointment(appointment, user); err == nil {

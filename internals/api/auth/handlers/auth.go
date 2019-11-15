@@ -20,7 +20,7 @@ func New(s server.Server) *AuthHandler {
 	}
 }
 
-func (a *AuthHandler) Login(context server.Context) {
+func (a *AuthHandler) Login(context server.Request) {
 	var loginRequest requests.LoginRequest
 	context.GetBodyMarshalled(&loginRequest)
 	valid, err := govalidator.ValidateStruct(loginRequest)

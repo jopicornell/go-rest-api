@@ -11,14 +11,16 @@ import (
 	"strconv"
 )
 
-type context struct {
+var UserContextKey = "user"
+
+type request struct {
 	Request        *http.Request
 	ResponseWriter http.ResponseWriter
 	PathParameters map[string]string
 	user           *models.User
 }
 
-type Context interface {
+type Request interface {
 	GetPathParameters() map[string]string
 	GetParamUInt(param string) uint
 	GetRequest() *http.Request
@@ -30,27 +32,28 @@ type Context interface {
 	Respond(statusCode int)
 }
 
-func NewContext(req *http.Request, resWriter http.ResponseWriter) *context {
-	return &context{
+func NewRequest(req *http.Request, resWriter http.ResponseWriter) *request {
+	return &request{
 		Request:        req,
 		ResponseWriter: resWriter,
 		PathParameters: mux.Vars(req),
 	}
 }
 
-func (r *context) GetRequest() *http.Request {
+func (r *request) GetRequest() *http.Request {
 	return r.Request
 }
 
-func (r *context) GetWriter() http.ResponseWriter {
+func (r *request) GetWriter() http.ResponseWriter {
 	return r.ResponseWriter
 }
 
-func (r *context) GetUser() *models.User {
-	return r.user
+func (r *request) GetUser() *models.User {
+	user := r.Request.Context().Value(UserContextKey).(models.User)
+	return &user
 }
 
-func (r *context) GetBody() []byte {
+func (r *request) GetBody() []byte {
 	if body, err := ioutil.ReadAll(r.Request.Body); err == nil {
 		return body
 	} else {
@@ -59,22 +62,22 @@ func (r *context) GetBody() []byte {
 	}
 }
 
-func (r *context) GetBodyMarshalled(ifc interface{}) {
+func (r *request) GetBodyMarshalled(ifc interface{}) {
 	if err := json.Unmarshal(r.GetBody(), ifc); err != nil {
 		log.Println(fmt.Sprintf("error unmarshalling: %s", err))
 		r.Respond(http.StatusBadRequest)
 	}
 }
 
-func (r *context) GetPathParameters() map[string]string {
+func (r *request) GetPathParameters() map[string]string {
 	return r.PathParameters
 }
 
-func (r *context) GetParam(param string) string {
+func (r *request) GetParam(param string) string {
 	return r.PathParameters[param]
 }
 
-func (r *context) GetParamUInt(param string) uint {
+func (r *request) GetParamUInt(param string) uint {
 	if value, err := strconv.Atoi(r.PathParameters[param]); err == nil {
 		return uint(value)
 	} else {
@@ -82,7 +85,7 @@ func (r *context) GetParamUInt(param string) uint {
 	}
 }
 
-func (r *context) RespondJSON(statusCode int, ifc interface{}) {
+func (r *request) RespondJSON(statusCode int, ifc interface{}) {
 	r.ResponseWriter.Header().Add("Content-Type", "application/json")
 	r.ResponseWriter.WriteHeader(statusCode)
 	if err := json.NewEncoder(r.ResponseWriter).Encode(ifc); err == nil {
@@ -91,7 +94,7 @@ func (r *context) RespondJSON(statusCode int, ifc interface{}) {
 	}
 }
 
-func (r *context) Respond(statusCode int) {
+func (r *request) Respond(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	if _, err := r.ResponseWriter.Write([]byte{}); err != nil {
 		panic(err)

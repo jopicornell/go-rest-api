@@ -18,5 +18,6 @@ require (
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/urfave/negroni v1.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20190927123631-a832865fa7ad
+	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 	gopkg.in/guregu/null.v3 v3.4.0
 )

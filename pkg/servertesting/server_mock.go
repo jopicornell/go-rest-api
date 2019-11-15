@@ -68,6 +68,6 @@ func (s *ServerMock) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	println(fmt.Sprintf("Request %s %s took %s", r.Method, r.RequestURI, duration.String()))
 }
 
-func (s ServerMock) ListenAndServe() {
-	log.Panic(http.ListenAndServe(fmt.Sprintf(":%s", s.GetServerConfig().Port), &s))
+func (s *ServerMock) ListenAndServe() {
+	log.Panic(http.ListenAndServe(fmt.Sprintf(":%s", s.GetServerConfig().Port), s))
 }

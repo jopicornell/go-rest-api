@@ -15,6 +15,7 @@ func UserMiddleware(s server.Server) mux.MiddlewareFunc {
 			token := r.Context().Value("user").(*jwt.Token)
 			claims, _ := token.Claims.(jwt.MapClaims)
 			fmt.Println(claims["sub"])
+			h.ServeHTTP(w, r)
 		})
 	}
 }

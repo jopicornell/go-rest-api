@@ -1,11 +1,9 @@
 package handlers
 
 import (
-	"fmt"
 	"github.com/jopicornell/go-rest-api/internals/api/appointments/services"
 	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/pkg/server"
-	"log"
 	"net/http"
 )
 
@@ -21,23 +19,13 @@ func New(s server.Server) *AppointmentHandler {
 }
 
 func (s *AppointmentHandler) GetAppointmentsHandler(request server.Request) {
-	appointments, err := s.appointmentService.GetAppointments()
-	if err != nil {
-		log.Println(fmt.Errorf("error getting appointments: %w", err))
-		request.Respond(http.StatusInternalServerError)
-		return
-	}
+	appointments := s.appointmentService.GetAppointments()
 	request.RespondJSON(http.StatusOK, appointments)
 }
 
 func (s *AppointmentHandler) GetOneAppointmentHandler(request server.Request) {
 	id := request.GetParamUInt("id")
-	appointment, err := s.appointmentService.GetAppointment(uint(id))
-	if err != nil {
-		log.Println(fmt.Errorf("error getting appointment(%d): %w", id, err))
-		request.Respond(http.StatusInternalServerError)
-		return
-	}
+	appointment := s.appointmentService.GetAppointment(uint(id))
 	if appointment == nil {
 		request.Respond(http.StatusNotFound)
 		return
@@ -49,12 +37,7 @@ func (s *AppointmentHandler) UpdateAppointmentHandler(request server.Request) {
 	id := request.GetParamUInt("id")
 	var appointment *models.Appointment
 	request.GetBodyMarshalled(&appointment)
-	appointment, err := s.appointmentService.UpdateAppointment(uint(id), appointment)
-	if err != nil {
-		log.Println(fmt.Errorf("error getting appointment(%d): %w", id, err))
-		request.Respond(http.StatusInternalServerError)
-		return
-	}
+	appointment = s.appointmentService.UpdateAppointment(uint(id), appointment)
 	if appointment == nil {
 		request.Respond(http.StatusNotFound)
 		return
@@ -65,20 +48,13 @@ func (s *AppointmentHandler) UpdateAppointmentHandler(request server.Request) {
 func (s *AppointmentHandler) CreateAppointmentHandler(request server.Request) {
 	var appointment *models.Appointment
 	request.GetBodyMarshalled(&appointment)
-	if appointment, err := s.appointmentService.CreateAppointment(appointment, request.GetUser()); err == nil {
-		request.RespondJSON(http.StatusCreated, appointment)
-	} else {
-		log.Println(fmt.Errorf("error creating appointment %+v: %w", appointment, err))
-		request.Respond(http.StatusInternalServerError)
-	}
+	appointment = s.appointmentService.CreateAppointment(appointment, request.GetUser())
+	request.RespondJSON(http.StatusCreated, appointment)
+
 }
 
 func (s *AppointmentHandler) DeleteAppointmentHandler(request server.Request) {
 	id := request.GetParamUInt("id")
-	if err := s.appointmentService.DeleteAppointment(uint(id)); err == nil {
-		request.Respond(http.StatusOK)
-	} else {
-		log.Println(fmt.Errorf("error deleting appointment %d: %w", id, err))
-		request.Respond(http.StatusInternalServerError)
-	}
+	s.appointmentService.DeleteAppointment(uint(id))
+	request.Respond(http.StatusNoContent)
 }

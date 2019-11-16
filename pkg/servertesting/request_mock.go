@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func NewContext(r *http.Request, w http.ResponseWriter, pathParameters map[string]string) *ContextMock {
+func NewRequest(r *http.Request, w http.ResponseWriter, pathParameters map[string]string) *ContextMock {
 	return &ContextMock{
 		Request:        r,
 		ResponseWriter: w,

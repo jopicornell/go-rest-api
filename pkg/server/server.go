@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"time"
 )
 
@@ -74,6 +75,12 @@ func (s *server) ListenAndServe() {
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+	defer func() {
+		if err := recover(); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			logPanic(err, r)
+		}
+	}()
 	s.Router.GetInnerRouter().ServeHTTP(w, r)
 	duration := time.Now().Sub(start)
 	println(fmt.Sprintf("Request %s %s took %s", r.Method, r.RequestURI, duration.String()))
@@ -86,4 +93,8 @@ func (s *server) initializeRelationalDatabase() *sqlx.DB {
 		}
 	}
 	return s.relationalDB.GetDB()
+}
+
+func logPanic(recoveredPanic interface{}, r *http.Request) {
+	log.Printf("Request %s %s panicked \"%+v\" with stack: \n\n%s\n", r.Method, r.RequestURI, recoveredPanic, debug.Stack())
 }

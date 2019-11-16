@@ -9,12 +9,12 @@ import (
 
 func ConfigureRoutes(s server.Server) {
 	handler := handlers.New(s)
-	privateGroup := s.GetRouter().AddGroup("")
-	privateGroup.Use(commonMiddlewares.JWTPayload(s), middlewares.UserMiddleware(s))
-	privateGroup.AddRoute("/appointments", handler.GetAppointmentsHandler).Methods("GET")
-	privateGroup.AddRoute("/appointments", handler.CreateAppointmentHandler).Methods("POST")
-	privateGroup.AddRoute("/appointments/{id:[0-9]+}", handler.DeleteAppointmentHandler).Methods("DELETE")
-	privateGroup.AddRoute("/appointments/{id:[0-9]+}", handler.GetOneAppointmentHandler).Methods("GET")
-	privateGroup.AddRoute("/appointments/{id:[0-9]+}", handler.UpdateAppointmentHandler).Methods("PUT")
+	appointments := s.GetRouter().AddGroup("/appointments")
+	appointments.Use(commonMiddlewares.JWTPayload(s), middlewares.UserMiddleware(s))
+	appointments.AddRoute("", handler.GetAppointmentsHandler).Methods("GET")
+	appointments.AddRoute("", handler.CreateAppointmentHandler).Methods("POST")
+	appointments.AddRoute("/{id:[0-9]+}", handler.DeleteAppointmentHandler).Methods("DELETE")
+	appointments.AddRoute("/{id:[0-9]+}", handler.GetOneAppointmentHandler).Methods("GET")
+	appointments.AddRoute("/{id:[0-9]+}", handler.UpdateAppointmentHandler).Methods("PUT")
 	s.AddStatics("/", "static")
 }

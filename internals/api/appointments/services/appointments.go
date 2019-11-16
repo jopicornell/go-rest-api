@@ -8,11 +8,11 @@ import (
 )
 
 type AppointmentsService interface {
-	GetAppointments() ([]models.Appointment, error)
-	GetAppointment(uint) (*models.Appointment, error)
-	UpdateAppointment(uint, *models.Appointment) (*models.Appointment, error)
-	CreateAppointment(*models.Appointment, *models.User) (*models.Appointment, error)
-	DeleteAppointment(uint) error
+	GetAppointments() []models.Appointment
+	GetAppointment(uint) *models.Appointment
+	UpdateAppointment(uint, *models.Appointment) *models.Appointment
+	CreateAppointment(*models.Appointment, *models.User) *models.Appointment
+	DeleteAppointment(uint)
 }
 
 type appointmentService struct {
@@ -27,75 +27,75 @@ func New(db *sqlx.DB) AppointmentsService {
 	}
 }
 
-func (s *appointmentService) GetAppointments() (appointments []models.Appointment, err error) {
+func (s *appointmentService) GetAppointments() (appointments []models.Appointment) {
 	appointments = []models.Appointment{}
-	if err = s.db.Select(&appointments, "SELECT * from appointments"); err != nil {
-		return nil, err
+	if err := s.db.Select(&appointments, "SELECT * from appointments"); err != nil {
+		panic(err)
 	}
-	return appointments, nil
+	return appointments
 }
 
-func (s *appointmentService) GetAppointment(id uint) (*models.Appointment, error) {
+func (s *appointmentService) GetAppointment(id uint) *models.Appointment {
 	var appointment models.Appointment
 	if err := s.db.Get(&appointment, "SELECT * from appointments where id = ?", id); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil
+			return nil
 		}
-		return nil, err
+		panic(err)
 	}
-	return &appointment, nil
+	return &appointment
 }
 
-func (s *appointmentService) CreateAppointment(appointment *models.Appointment, user *models.User) (*models.Appointment, error) {
-	if appointment == nil {
-		return nil, AppointmentNullError
-	}
+func (s *appointmentService) CreateAppointment(appointment *models.Appointment, user *models.User) *models.Appointment {
 	insertQuery := "INSERT INTO appointments (start_date, duration, end_date, status, user_id) VALUES (?, ?, ?, ?, ?)"
-	tx, err := s.db.Beginx()
-	if err != nil {
-		return nil, err
-	}
+	tx := s.db.MustBegin()
 	if _, err := tx.Exec(insertQuery, appointment.StartDate, appointment.Duration, appointment.EndDate, models.StatusPending, user.ID); err == nil {
-		err = tx.Commit()
-		return appointment, err
-	} else {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			return nil, err
+		if err = tx.Commit(); err != nil {
+			if err = tx.Rollback(); err != nil {
+				panic(err)
+			}
+			panic(err)
 		}
-		return nil, err
+		return appointment
+	} else {
+		if errRollback := tx.Rollback(); errRollback != nil {
+
+			panic(errRollback)
+		} else {
+			panic(err)
+		}
 	}
 }
 
-func (s *appointmentService) UpdateAppointment(id uint, appointment *models.Appointment) (*models.Appointment, error) {
-	if appointment == nil {
-		return nil, AppointmentNullError
-	}
+func (s *appointmentService) UpdateAppointment(id uint, appointment *models.Appointment) *models.Appointment {
 	updateQuery := "UPDATE appointments SET start_date=?, duration=?, end_date=?, status=? where id = ?"
 	tx := s.db.MustBegin()
 	if _, err := tx.Exec(updateQuery, appointment.StartDate, appointment.Duration, appointment.EndDate, appointment.Status, appointment.ID); err == nil {
-		err = tx.Commit()
-		return appointment, err
+		if err = tx.Commit(); err != nil {
+			panic(err)
+		}
+		return appointment
 	} else {
 		errRollback := tx.Rollback()
 		if errRollback != nil {
-			return nil, err
+			panic(err)
 		}
-		return nil, err
+		panic(err)
 	}
 }
 
-func (s *appointmentService) DeleteAppointment(id uint) (err error) {
+func (s *appointmentService) DeleteAppointment(id uint) {
 	deleteQuery := "DELETE FROM appointments WHERE id = ?"
 	tx := s.db.MustBegin()
 	if _, err := tx.Exec(deleteQuery, id); err == nil {
-		err = tx.Commit()
-		return err
+		if err = tx.Commit(); err != nil {
+			panic(err)
+		}
 	} else {
 		errRollback := tx.Rollback()
 		if errRollback != nil {
-			return errRollback
+			panic(errRollback)
 		}
-		return err
+		panic(err)
 	}
 }

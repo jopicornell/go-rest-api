@@ -26,13 +26,13 @@ func TestNew(t *testing.T) {
 }
 
 func TestAppointmentService_GetAppointments(t *testing.T) {
-	t.Run("should throw if db throws", getAppointmentsShouldThrowIfDbThrows)
+	t.Run("should panic if db throws", getAppointmentsShouldPanicIfDbThrows)
 	t.Run("should return empty slice if no rows", getAppointmentsShouldReturnEmptySliceIfNoRows)
 	t.Run("should return list of appointments if all went ok", getAppointmentsShouldReturnListOfAppointments)
 }
 
 func TestAppointmentService_GetAppointment(t *testing.T) {
-	t.Run("should throw if db throws", getAppointmentShouldThrowIfDbThrows)
+	t.Run("should panic if db throws", getAppointmentShouldPanicIfDbThrows)
 	t.Run("should return nil if no rows", getAppointmentShouldReturnNilIfNoRows)
 	t.Run("should return appointment if all went ok", getAppointmentShouldReturnAppointment)
 }
@@ -45,7 +45,7 @@ func TestAppointmentService_CreateAppointment(t *testing.T) {
 
 func TestAppointmentService_UpdateAppointment(t *testing.T) {
 	t.Run("should throw if db throws and rollback", updateAppointmentShouldThrowIfDbThrows)
-	t.Run("should throw if appointment to updateis null", updateAppointmentShouldThrowIfAppointmentIsNull)
+	t.Run("should throw if appointment to updateis null", updateAppointmentShouldPanicIfAppointmentIsNull)
 	t.Run("should return updated appointment and commit", updateAppointmentShouldReturnAppointmentAndCommit)
 }
 
@@ -54,18 +54,23 @@ func TestAppointmentService_DeleteAppointment(t *testing.T) {
 	t.Run("should return no error and commit", deleteAppointmentShouldExecuteAndCommit)
 }
 
-func getAppointmentsShouldThrowIfDbThrows(t *testing.T) {
+func getAppointmentsShouldPanicIfDbThrows(t *testing.T) {
 	dbMock, mock := mockDB(t)
 	appointmentService := New(dbMock)
 	expected := errors.New("test error")
 	mock.ExpectQuery("SELECT \\* from appointments").WillReturnError(expected)
-
-	if _, got := appointmentService.GetAppointments(); got != nil {
-		if got != expected {
-			t.Errorf("error expected %v got %+v", expected, got)
+	defer func() {
+		if recover := recover(); recover != nil {
+			if recover != expected {
+				t.Errorf("error expected %v got %+v", expected, recover)
+			}
+		} else {
+			t.Errorf("Error should have been thrown")
 		}
-	} else {
-		t.Errorf("Error should have been thrown")
+	}()
+	result := appointmentService.GetAppointments()
+	if result != nil {
+		t.Errorf("result expected to be nil, found %+v", result)
 	}
 }
 
@@ -74,10 +79,7 @@ func getAppointmentsShouldReturnEmptySliceIfNoRows(t *testing.T) {
 	appointmentService := New(dbMock)
 	mock.ExpectQuery("SELECT \\* from appointments").WillReturnRows(&sqlmock.Rows{})
 
-	if got, err := appointmentService.GetAppointments(); got != nil {
-		if err != nil {
-			t.Errorf("expected err %+v to be nil", err)
-		}
+	if got := appointmentService.GetAppointments(); got != nil {
 		if len(got) != 0 {
 			t.Errorf("expected result to be empty, got %+v", got)
 		}
@@ -93,31 +95,34 @@ func getAppointmentsShouldReturnListOfAppointments(t *testing.T) {
 	expected := addAppointmentRows(rows, 5)
 	mock.ExpectQuery("SELECT \\* from appointments").WillReturnRows(rows)
 
-	if got, err := appointmentService.GetAppointments(); got != nil {
-		if err != nil {
-			t.Errorf("expected err %+v to be nil", err)
-		}
+	if got := appointmentService.GetAppointments(); got != nil {
 		if !reflect.DeepEqual(expected, got) {
 			t.Errorf("expected result to be %+v, got %+v", expected, got)
 		}
 	} else {
-		t.Errorf("result should not be empty, got err %s", err)
+		t.Errorf("result should not be empty")
 	}
 }
 
-func getAppointmentShouldThrowIfDbThrows(t *testing.T) {
+func getAppointmentShouldPanicIfDbThrows(t *testing.T) {
 	dbMock, mock := mockDB(t)
 	appointmentService := New(dbMock)
 	expected := errors.New("test error")
 	id := uint(1)
 	mock.ExpectQuery("SELECT \\* from appointments").WithArgs(id).WillReturnError(expected)
-
-	if _, got := appointmentService.GetAppointment(id); got != nil {
-		if got != expected {
-			t.Errorf("error expected %v got %+v", expected, got)
+	defer func() {
+		if recover := recover(); recover != nil {
+			if recover != expected {
+				t.Errorf("error expected %v got %+v", expected, recover)
+			}
+		} else {
+			t.Errorf("Error should have been thrown")
 		}
-	} else {
-		t.Errorf("Error should have been thrown")
+	}()
+	if result := appointmentService.GetAppointment(id); result != nil {
+		if result != nil {
+			t.Errorf("result expected to be nil got %+v", result)
+		}
 	}
 }
 
@@ -127,11 +132,7 @@ func getAppointmentShouldReturnNilIfNoRows(t *testing.T) {
 	id := uint(1)
 	mock.ExpectQuery("SELECT \\* from appointments").WithArgs(id).WillReturnError(sql.ErrNoRows)
 
-	if got, err := appointmentService.GetAppointment(id); got == nil {
-		if err != nil {
-			t.Errorf("expected err %+v to be nil", err)
-		}
-	} else {
+	if got := appointmentService.GetAppointment(id); got != nil {
 		t.Errorf("result should be nill, got %+v", got)
 	}
 }
@@ -144,10 +145,7 @@ func getAppointmentShouldReturnAppointment(t *testing.T) {
 	id := uint(1)
 	mock.ExpectQuery("SELECT \\* from appointments").WithArgs(id).WillReturnRows(rows)
 
-	if got, err := appointmentService.GetAppointment(id); got != nil {
-		if err != nil {
-			t.Errorf("expected err %+v to be nil", err)
-		}
+	if got := appointmentService.GetAppointment(id); got != nil {
 		if reflect.DeepEqual(got, expected) {
 			t.Errorf("expected result to be %+v, got %+v", expected, got)
 		}
@@ -166,15 +164,12 @@ func createAppointmentShouldReturnAppointmentAndCommit(t *testing.T) {
 		appointment.StartDate, appointment.Duration, appointment.EndDate, appointment.Status, user.ID,
 	).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
-	if got, err := appointmentService.CreateAppointment(appointment, user); err == nil {
-		if got == nil {
-			t.Errorf("expected response not to be null")
-		}
+	if got := appointmentService.CreateAppointment(appointment, user); got != nil {
 		if appointment != got {
 			t.Errorf("expected result to be %+v, got %+v", appointment, got)
 		}
 	} else {
-		t.Errorf("error should be null, got %w", err)
+		t.Errorf("expected response not to be null")
 	}
 }
 
@@ -196,15 +191,12 @@ func updateAppointmentShouldReturnAppointmentAndCommit(t *testing.T) {
 		appointment.StartDate, appointment.Duration, appointment.EndDate, appointment.Status, appointment.ID,
 	).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
-	if got, err := appointmentService.UpdateAppointment(id, appointment); err == nil {
-		if got == nil {
-			t.Errorf("expected response not to be null")
-		}
+	if got := appointmentService.UpdateAppointment(id, appointment); got != nil {
 		if appointment != got {
 			t.Errorf("expected result to be %+v, got %+v", appointment, got)
 		}
 	} else {
-		t.Errorf("error should be null, got %w", err)
+		t.Errorf("expected response not to be null")
 	}
 }
 
@@ -219,31 +211,27 @@ func updateAppointmentShouldThrowIfDbThrows(t *testing.T) {
 		appointment.StartDate, appointment.Duration, appointment.EndDate, appointment.Status, appointment.ID,
 	).WillReturnError(expectedError)
 	mock.ExpectRollback()
-	if got, err := appointmentService.UpdateAppointment(id, appointment); err != nil {
-		if got != nil {
-			t.Errorf("expected response to be null")
+	defer func() {
+		if recovered := recover(); recovered == nil {
+			t.Errorf("Error should have been thrown")
 		}
-		if err != expectedError {
-			t.Errorf("expected err to be %+v, got %+v", expectedError, err)
-		}
-	} else {
-		t.Errorf("error should not be null")
+	}()
+	if got := appointmentService.UpdateAppointment(id, appointment); got != nil {
+		t.Errorf("result should have been nil")
 	}
 }
 
-func updateAppointmentShouldThrowIfAppointmentIsNull(t *testing.T) {
+func updateAppointmentShouldPanicIfAppointmentIsNull(t *testing.T) {
 	dbMock, _ := mockDB(t)
 	appointmentService := New(dbMock)
 	id := uint(1)
-	if got, err := appointmentService.UpdateAppointment(id, nil); err != nil {
-		if got != nil {
-			t.Errorf("expected response to be null")
+	defer func() {
+		if recovered := recover(); recovered == nil {
+			t.Errorf("Error should have been thrown")
 		}
-		if err != AppointmentNullError {
-			t.Errorf("expected err to be %+v, got %+v", AppointmentNullError, err)
-		}
-	} else {
-		t.Errorf("error should not be null")
+	}()
+	if got := appointmentService.UpdateAppointment(id, nil); got != nil {
+		t.Errorf("expected updateAppointment to throw")
 	}
 }
 

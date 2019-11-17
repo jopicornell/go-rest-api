@@ -8,11 +8,11 @@ import (
 )
 
 type AppointmentsService interface {
-	GetAppointments() []models.Appointment
-	GetAppointment(uint) *models.Appointment
-	UpdateAppointment(uint, *models.Appointment) *models.Appointment
-	CreateAppointment(*models.Appointment, *models.User) *models.Appointment
-	DeleteAppointment(uint)
+	GetAppointments() ([]models.Appointment, error)
+	GetAppointment(uint) (*models.Appointment, error)
+	UpdateAppointment(uint, *models.Appointment) (*models.Appointment, error)
+	CreateAppointment(*models.Appointment, *models.User) (*models.Appointment, error)
+	DeleteAppointment(uint) error
 }
 
 type appointmentService struct {
@@ -27,75 +27,69 @@ func New(db *sqlx.DB) AppointmentsService {
 	}
 }
 
-func (s *appointmentService) GetAppointments() (appointments []models.Appointment) {
+func (s *appointmentService) GetAppointments() (appointments []models.Appointment, err error) {
 	appointments = []models.Appointment{}
-	if err := s.db.Select(&appointments, "SELECT * from appointments"); err != nil {
-		panic(err)
+	if err = s.db.Select(&appointments, "SELECsT * from appointments"); err != nil {
+		return nil, err
 	}
-	return appointments
+	return appointments, nil
 }
 
-func (s *appointmentService) GetAppointment(id uint) *models.Appointment {
+func (s *appointmentService) GetAppointment(id uint) (*models.Appointment, error) {
 	var appointment models.Appointment
 	if err := s.db.Get(&appointment, "SELECT * from appointments where id = ?", id); err != nil {
 		if err == sql.ErrNoRows {
-			return nil
+			return nil, nil
 		}
-		panic(err)
+		return nil, err
 	}
-	return &appointment
+	return &appointment, nil
 }
 
-func (s *appointmentService) CreateAppointment(appointment *models.Appointment, user *models.User) *models.Appointment {
+func (s *appointmentService) CreateAppointment(appointment *models.Appointment, user *models.User) (*models.Appointment, error) {
 	insertQuery := "INSERT INTO appointments (start_date, duration, end_date, status, user_id) VALUES (?, ?, ?, ?, ?)"
 	tx := s.db.MustBegin()
 	if _, err := tx.Exec(insertQuery, appointment.StartDate, appointment.Duration, appointment.EndDate, models.StatusPending, user.ID); err == nil {
-		if err = tx.Commit(); err != nil {
-			if err = tx.Rollback(); err != nil {
-				panic(err)
-			}
-			panic(err)
-		}
-		return appointment
+		err = tx.Commit()
+		return appointment, err
 	} else {
-		if errRollback := tx.Rollback(); errRollback != nil {
-
-			panic(errRollback)
-		} else {
-			panic(err)
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			return nil, err
 		}
+		return nil, err
 	}
 }
 
-func (s *appointmentService) UpdateAppointment(id uint, appointment *models.Appointment) *models.Appointment {
+func (s *appointmentService) UpdateAppointment(id uint, appointment *models.Appointment) (*models.Appointment, error) {
+	if appointment == nil {
+		return nil, AppointmentNullError
+	}
 	updateQuery := "UPDATE appointments SET start_date=?, duration=?, end_date=?, status=? where id = ?"
 	tx := s.db.MustBegin()
 	if _, err := tx.Exec(updateQuery, appointment.StartDate, appointment.Duration, appointment.EndDate, appointment.Status, appointment.ID); err == nil {
-		if err = tx.Commit(); err != nil {
-			panic(err)
-		}
-		return appointment
+		err = tx.Commit()
+		return appointment, err
 	} else {
 		errRollback := tx.Rollback()
 		if errRollback != nil {
 			panic(err)
 		}
-		panic(err)
+		return nil, err
 	}
 }
 
-func (s *appointmentService) DeleteAppointment(id uint) {
+func (s *appointmentService) DeleteAppointment(id uint) (err error) {
 	deleteQuery := "DELETE FROM appointments WHERE id = ?"
 	tx := s.db.MustBegin()
 	if _, err := tx.Exec(deleteQuery, id); err == nil {
-		if err = tx.Commit(); err != nil {
-			panic(err)
-		}
+		err = tx.Commit()
+		return err
 	} else {
 		errRollback := tx.Rollback()
 		if errRollback != nil {
-			panic(errRollback)
+			return errRollback
 		}
-		panic(err)
+		return err
 	}
 }

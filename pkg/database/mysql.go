@@ -27,7 +27,7 @@ func (m *MySQL) SetDB(dbInstance *sqlx.DB) {
 func (m *MySQL) InitializeDB() *sqlx.DB {
 	var db *sqlx.DB
 	err := Retry(func() (err error) {
-		db, err = sqlx.Connect("mysql", m.PSN)
+		db, err = sqlx.Open("mysql", m.PSN)
 		if err != nil {
 			logrus.Errorf("Error connecting to db %s", err)
 		}
@@ -38,5 +38,6 @@ func (m *MySQL) InitializeDB() *sqlx.DB {
 		log.Fatal(wrapError.Error())
 	}
 	log.Println("New connection to db")
+	db.SetMaxOpenConns(10)
 	return db
 }

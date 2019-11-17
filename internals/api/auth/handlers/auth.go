@@ -10,7 +10,6 @@ import (
 )
 
 type AuthHandler struct {
-	server.Handler
 	authService services.AuthService
 }
 
@@ -20,22 +19,22 @@ func New(s server.Server) *AuthHandler {
 	}
 }
 
-func (a *AuthHandler) Login(context server.Request) {
+func (a *AuthHandler) Login(response server.Response, request server.Request) {
 	var loginRequest requests.LoginRequest
-	context.GetBodyMarshalled(&loginRequest)
+	request.GetBodyMarshalled(&loginRequest)
 	valid, err := govalidator.ValidateStruct(loginRequest)
 	if err != nil || !valid {
-		context.Respond(http.StatusBadRequest)
+		response.Respond(http.StatusBadRequest)
 		return
 	}
 	if token, err := a.authService.Login(loginRequest.Email, loginRequest.Password); err == nil {
-		context.RespondJSON(http.StatusOK, token)
+		response.RespondJSON(http.StatusOK, token)
 	} else {
 		switch err {
 		case errors.AuthUserNotMatched:
-			context.Respond(http.StatusForbidden)
+			response.Respond(http.StatusForbidden)
 		default:
-			context.Respond(http.StatusInternalServerError)
+			response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
 		}
 	}
 }

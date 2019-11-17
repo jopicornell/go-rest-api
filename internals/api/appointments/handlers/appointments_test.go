@@ -21,28 +21,39 @@ type AppointmentServiceMock struct {
 	errorToThrow error
 }
 
-func (ts *AppointmentServiceMock) UpdateAppointment(id uint, appointment *models.Appointment) *models.Appointment {
-	return ts.appointment
-}
-
-func (ts *AppointmentServiceMock) DeleteAppointment(id uint) {}
-
-func (ts *AppointmentServiceMock) CreateAppointment(appointment *models.Appointment, user *models.User) *models.Appointment {
-	return ts.appointment
-}
-
-func (ts *AppointmentServiceMock) GetAppointment(id uint) *models.Appointment {
+func (ts *AppointmentServiceMock) UpdateAppointment(id uint, appointment *models.Appointment) (*models.Appointment, error) {
 	if ts.errorToThrow != nil {
-		panic(ts.errorToThrow)
+		return nil, ts.errorToThrow
 	}
-	return ts.appointment
+	return ts.appointment, nil
 }
 
-func (ts *AppointmentServiceMock) GetAppointments() []models.Appointment {
+func (ts *AppointmentServiceMock) DeleteAppointment(id uint) error {
 	if ts.errorToThrow != nil {
-		panic(ts.errorToThrow)
+		return ts.errorToThrow
 	}
-	return ts.appointments
+	return nil
+}
+
+func (ts *AppointmentServiceMock) CreateAppointment(appointment *models.Appointment, user *models.User) (*models.Appointment, error) {
+	if ts.errorToThrow != nil {
+		return nil, ts.errorToThrow
+	}
+	return ts.appointment, nil
+}
+
+func (ts *AppointmentServiceMock) GetAppointment(id uint) (*models.Appointment, error) {
+	if ts.errorToThrow != nil {
+		return nil, ts.errorToThrow
+	}
+	return ts.appointment, nil
+}
+
+func (ts *AppointmentServiceMock) GetAppointments() ([]models.Appointment, error) {
+	if ts.errorToThrow != nil {
+		return nil, ts.errorToThrow
+	}
+	return ts.appointments, nil
 }
 
 func TestAppointmentHandler_New(t *testing.T) {
@@ -51,20 +62,24 @@ func TestAppointmentHandler_New(t *testing.T) {
 
 func TestAppointmentHandler_GetOneAppointmentHandler(t *testing.T) {
 	t.Run("should throw error if service is missing", panicErrorServiceMissing)
+	t.Run("should throw InternalServerError if service fails", internalErrorIfServiceFailsReturningAppointment)
 	t.Run("should throw a NotFound if service says so", notFoundIfServiceFoundsNothing)
 	t.Run("should return appointment returned by the service", returnAppointmentByService)
 }
 
 func TestAppointmentHandler_GetAppointmentsHandler(t *testing.T) {
+	t.Run("should throw InternalServer if some error is raised by the service", internalErrorIfServiceFailsReturningAppointments)
 	t.Run("should return appointments returned by the service", returnAppointmentsByService)
 }
 
 func TestAppointmentHandler_UpdateAppointmentHandler(t *testing.T) {
 	t.Run("should throw a NotFound if service says so", updateAppointmentShouldThrowNotFound)
+	t.Run("should throw InternalServer if some error is raised by the service", updateAppointmentShouldThrowIfServiceFails)
 	t.Run("should return appointment updated by the service", updateAppointmentShouldReturnUpdatedAppointment)
 }
 
 func TestAppointmentHandler_CreateAppointmentHandler(t *testing.T) {
+	t.Run("should throw InternalServer if some error is raised by the service", createAppointmentShouldThrowIfServiceFails)
 	t.Run("should return appointment created by the service", createAppointmentShouldReturnCreatedAppointment)
 }
 
@@ -75,9 +90,9 @@ func TestAppointmentHandler_DeleteAppointmentHandler(t *testing.T) {
 
 func panicErrorServiceMissing(t *testing.T) {
 	handler := &AppointmentHandler{}
-	context := servertesting.NewRequest(
+	response := servertesting.NewResponse()
+	request := servertesting.NewRequest(
 		httptest.NewRequest("GET", "/appointments/1", nil),
-		httptest.NewRecorder(),
 		map[string]string{
 			"id": "1",
 		},
@@ -87,7 +102,7 @@ func panicErrorServiceMissing(t *testing.T) {
 			t.Errorf("function did not panic")
 		}
 	}()
-	handler.GetOneAppointmentHandler(context)
+	handler.GetOneAppointmentHandler(response, request)
 }
 
 func returnAppointmentByService(t *testing.T) {
@@ -101,15 +116,14 @@ func returnAppointmentByService(t *testing.T) {
 		UserId:    0,
 	}
 	handler.appointmentService = &AppointmentServiceMock{appointment: expected}
-	recorder := httptest.NewRecorder()
+	recorder := servertesting.NewResponse()
 	context := servertesting.NewRequest(
 		httptest.NewRequest("GET", "/appointments/1", nil),
-		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	handler.GetOneAppointmentHandler(context)
+	handler.GetOneAppointmentHandler(recorder, context)
 	var got *models.Appointment
 	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
 		t.Errorf("unmarshalling failed: %w %s", err, recorder.Body.String())
@@ -143,15 +157,14 @@ func returnAppointmentsByService(t *testing.T) {
 		},
 	}
 	handler.appointmentService = &AppointmentServiceMock{appointments: expected}
-	recorder := httptest.NewRecorder()
+	recorder := servertesting.NewResponse()
 	context := servertesting.NewRequest(
 		httptest.NewRequest("GET", "/appointments/1", nil),
-		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	handler.GetAppointmentsHandler(context)
+	handler.GetAppointmentsHandler(recorder, context)
 	var got []models.Appointment
 	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
 		t.Errorf("unmarshalling failed (%s): %w", recorder.Body.String(), err)
@@ -169,35 +182,58 @@ func internalErrorIfServiceFailsReturningAppointment(t *testing.T) {
 		appointment:  expected,
 		errorToThrow: goErrors.New("test error"),
 	}
-	recorder := httptest.NewRecorder()
+	recorder := servertesting.NewResponse()
 	context := servertesting.NewRequest(
 		httptest.NewRequest("GET", "/appointments/1", nil),
-		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	handler.GetOneAppointmentHandler(context)
-	if recorder.Code != 500 {
-		t.Errorf("expected status code to be 500 got %+v", recorder.Code)
+	handler.GetOneAppointmentHandler(recorder, context)
+	if err := recorder.ErrorCalled(); err != nil {
+		if err.StatusCode != http.StatusInternalServerError {
+			t.Errorf("expected status code to be %d returned %d", http.StatusInternalServerError, err.StatusCode)
+		}
+	} else {
+		t.Errorf("expected error to be called")
 	}
-	if recorder.Body.Len() != 0 {
-		t.Errorf("expected length to be 0 got %+v (%s)", recorder.Body.Len(), recorder.Body.String())
+}
+
+func internalErrorIfServiceFailsReturningAppointments(t *testing.T) {
+	handler := &AppointmentHandler{}
+	var expected []models.Appointment = nil
+	handler.appointmentService = &AppointmentServiceMock{
+		appointments: expected,
+		errorToThrow: goErrors.New("test error"),
+	}
+	recorder := servertesting.NewResponse()
+	context := servertesting.NewRequest(
+		httptest.NewRequest("GET", "/appointments/1", nil),
+		map[string]string{
+			"id": "1",
+		},
+	)
+	handler.GetAppointmentsHandler(recorder, context)
+	if err := recorder.ErrorCalled(); err != nil {
+		if err.StatusCode != http.StatusInternalServerError {
+			t.Errorf("expected status code to be %d returned %d", http.StatusInternalServerError, err.StatusCode)
+		}
+	} else {
+		t.Errorf("expected error to be called")
 	}
 }
 
 func notFoundIfServiceFoundsNothing(t *testing.T) {
 	handler := &AppointmentHandler{}
 	handler.appointmentService = &AppointmentServiceMock{}
-	recorder := httptest.NewRecorder()
+	recorder := servertesting.NewResponse()
 	context := servertesting.NewRequest(
 		httptest.NewRequest("GET", "/appointments/1", nil),
-		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	handler.GetOneAppointmentHandler(context)
+	handler.GetOneAppointmentHandler(recorder, context)
 	if recorder.Code != http.StatusNotFound {
 		t.Errorf("expected %+v got %+v", http.StatusNotFound, recorder.Code)
 	}
@@ -230,15 +266,14 @@ func updateAppointmentShouldReturnUpdatedAppointment(t *testing.T) {
 	} else {
 		t.Errorf("error marshalling appointment %w", err)
 	}
-	recorder := httptest.NewRecorder()
+	recorder := servertesting.NewResponse()
 	context := servertesting.NewRequest(
 		httptest.NewRequest("PUT", "/appointments/1", strings.NewReader(appointmentJSON)),
-		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	handler.UpdateAppointmentHandler(context)
+	handler.UpdateAppointmentHandler(recorder, context)
 	var got *models.Appointment
 	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
 		t.Errorf("unmarshalling failed: %w", err)
@@ -266,20 +301,20 @@ func updateAppointmentShouldThrowIfServiceFails(t *testing.T) {
 	} else {
 		t.Errorf("error marshalling appointment %w", err)
 	}
-	recorder := httptest.NewRecorder()
+	recorder := servertesting.NewResponse()
 	context := servertesting.NewRequest(
 		httptest.NewRequest("PUT", "/appointments/1", strings.NewReader(appointmentJSON)),
-		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	handler.UpdateAppointmentHandler(context)
-	if recorder.Body.Len() != 0 {
-		t.Errorf("expected length to be 0 got %+v", recorder.Body.Len())
-	}
-	if recorder.Code != http.StatusInternalServerError {
-		t.Errorf("expected status code to be %d got %d", http.StatusInternalServerError, recorder.Code)
+	handler.UpdateAppointmentHandler(recorder, context)
+	if err := recorder.ErrorCalled(); err != nil {
+		if err.StatusCode != http.StatusInternalServerError {
+			t.Errorf("expected status code to be %d returned %d", http.StatusInternalServerError, err.StatusCode)
+		}
+	} else {
+		t.Errorf("expected error to be called")
 	}
 
 }
@@ -297,15 +332,14 @@ func updateAppointmentShouldThrowNotFound(t *testing.T) {
 	} else {
 		t.Errorf("error marshalling appointment %w", err)
 	}
-	recorder := httptest.NewRecorder()
+	recorder := servertesting.NewResponse()
 	context := servertesting.NewRequest(
 		httptest.NewRequest("PUT", "/appointments/1", strings.NewReader(appointmentJSON)),
-		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	handler.UpdateAppointmentHandler(context)
+	handler.UpdateAppointmentHandler(recorder, context)
 
 	if recorder.Code != http.StatusNotFound {
 		t.Errorf("expected %+v got %+v", http.StatusNotFound, recorder.Code)
@@ -324,15 +358,14 @@ func createAppointmentShouldReturnCreatedAppointment(t *testing.T) {
 	} else {
 		t.Errorf("error marshalling appointment %w", err)
 	}
-	recorder := httptest.NewRecorder()
+	recorder := servertesting.NewResponse()
 	context := servertesting.NewRequest(
 		httptest.NewRequest("POST", "/appointments", strings.NewReader(appointmentJSON)),
-		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	handler.CreateAppointmentHandler(context)
+	handler.CreateAppointmentHandler(recorder, context)
 	var got *models.Appointment
 	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
 		t.Errorf("unmarshalling failed: %w", err)
@@ -346,18 +379,47 @@ func createAppointmentShouldReturnCreatedAppointment(t *testing.T) {
 	}
 }
 
-func deleteSuccessAndReturnNoContent(t *testing.T) {
+func createAppointmentShouldThrowIfServiceFails(t *testing.T) {
 	handler := &AppointmentHandler{}
-	handler.appointmentService = &AppointmentServiceMock{}
-	recorder := httptest.NewRecorder()
-	request := servertesting.NewRequest(
-		httptest.NewRequest("DELETE", "/appointments", nil),
-		recorder,
+
+	appointment := createFakeAppointment()
+	var appointmentJSON string
+	if marshallResult, err := json.Marshal(appointment); err == nil {
+		appointmentJSON = string(marshallResult)
+	} else {
+		t.Errorf("error marshalling appointment %w", err)
+	}
+	handler.appointmentService = &AppointmentServiceMock{
+		errorToThrow: goErrors.New("test error"),
+	}
+	recorder := servertesting.NewResponse()
+	context := servertesting.NewRequest(
+		httptest.NewRequest("POST", "/appointments", strings.NewReader(appointmentJSON)),
 		map[string]string{
 			"id": "1",
 		},
 	)
-	handler.DeleteAppointmentHandler(request)
+	handler.CreateAppointmentHandler(recorder, context)
+	if err := recorder.ErrorCalled(); err != nil {
+		if err.StatusCode != http.StatusInternalServerError {
+			t.Errorf("expected status code to be %d returned %d", http.StatusInternalServerError, err.StatusCode)
+		}
+	} else {
+		t.Errorf("expected error to be called")
+	}
+}
+
+func deleteSuccessAndReturnNoContent(t *testing.T) {
+	handler := &AppointmentHandler{}
+	handler.appointmentService = &AppointmentServiceMock{}
+	recorder := servertesting.NewResponse()
+	request := servertesting.NewRequest(
+		httptest.NewRequest("DELETE", "/appointments", nil),
+		map[string]string{
+			"id": "1",
+		},
+	)
+	handler.DeleteAppointmentHandler(recorder, request)
 	if recorder.Body.Len() != 0 {
 		t.Errorf("expected length to be 0 got %+v", recorder.Body.Len())
 	}
@@ -369,15 +431,14 @@ func deleteSuccessAndReturnNoContent(t *testing.T) {
 func deleteAppointmentThrowIfError(t *testing.T) {
 	handler := &AppointmentHandler{}
 	handler.appointmentService = &AppointmentServiceMock{}
-	recorder := httptest.NewRecorder()
+	recorder := servertesting.NewResponse()
 	request := servertesting.NewRequest(
 		httptest.NewRequest("DELETE", "/appointments", nil),
-		recorder,
 		map[string]string{
 			"id": "1",
 		},
 	)
-	handler.DeleteAppointmentHandler(request)
+	handler.DeleteAppointmentHandler(recorder, request)
 	if recorder.Body.Len() != 0 {
 		t.Errorf("expected length to be 0 got %+v", recorder.Body.Len())
 	}

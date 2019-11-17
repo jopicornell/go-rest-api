@@ -4,15 +4,15 @@ import (
 	"net/http"
 )
 
-type HandlerFunc func(Request)
+type HandlerFunc func(Response, Request)
 
-type Handler struct {
-	http.Handler
-	routes map[string]func()
+type handler struct{}
+
+type Handler interface {
 }
 
 func HandleHTTP(handler HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		handler(NewRequest(r, w))
+		handler(NewResponse(w), NewRequest(r))
 	}
 }

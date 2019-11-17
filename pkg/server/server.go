@@ -2,10 +2,12 @@ package server
 
 import (
 	goContext "context"
+	"encoding/json"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/jopicornell/go-rest-api/pkg/config"
 	"github.com/jopicornell/go-rest-api/pkg/database"
+	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 	"path"
@@ -13,18 +15,6 @@ import (
 	"runtime/debug"
 	"time"
 )
-
-func Initialize() Server {
-	server := &server{}
-	server.Config.Bootstrap()
-	server.initializeRelationalDatabase()
-	server.Router = NewRouter()
-	server.Server = http.Server{
-		Addr:    ":" + server.GetServerConfig().Port,
-		Handler: server,
-	}
-	return server
-}
 
 type Server interface {
 	http.Handler
@@ -43,13 +33,16 @@ type server struct {
 	Router       Router
 }
 
-func (s *server) Close() {
-	go func() {
-		if err := s.Server.Shutdown(goContext.TODO()); err != nil {
-			panic("panicking" + err.Error())
-		}
-	}()
-	log.Fatal(s.relationalDB.GetDB().Close())
+func Initialize() Server {
+	server := &server{}
+	server.Config.Bootstrap()
+	server.initializeRelationalDatabase()
+	server.Router = NewRouter()
+	server.Server = http.Server{
+		Addr:    ":" + server.GetServerConfig().Port,
+		Handler: server,
+	}
+	return server
 }
 
 func (s *server) GetRelationalDatabase() *sqlx.DB {
@@ -73,12 +66,21 @@ func (s *server) ListenAndServe() {
 	}
 }
 
+func (s *server) Close() {
+	go func() {
+		if err := s.Server.Shutdown(goContext.TODO()); err != nil {
+			panic("panicking" + err.Error())
+		}
+	}()
+	log.Fatal(s.relationalDB.GetDB().Close())
+}
+
+// implemented http.Handler interface to our Server so it can be
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	defer func() {
 		if err := recover(); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			logPanic(err, r)
+			handlePanic(err, w, r)
 		}
 	}()
 	s.Router.GetInnerRouter().ServeHTTP(w, r)
@@ -95,6 +97,24 @@ func (s *server) initializeRelationalDatabase() *sqlx.DB {
 	return s.relationalDB.GetDB()
 }
 
-func logPanic(recoveredPanic interface{}, r *http.Request) {
-	log.Printf("Request %s %s panicked \"%+v\" with stack: \n\n%s\n", r.Method, r.RequestURI, recoveredPanic, debug.Stack())
+func handlePanic(recoveredPanic interface{}, w http.ResponseWriter, r *http.Request) {
+	switch recoveredPanic.(type) {
+	case *Error:
+		err := recoveredPanic.(*Error)
+		logrus.Errorf("Request %s %s returned status %d with stack: \n\n%s\n", r.Method, r.RequestURI, err.StatusCode, debug.Stack())
+		w.WriteHeader(err.StatusCode)
+		if err.Body != nil {
+			if errJson := json.NewEncoder(w).Encode(err.Body); errJson != nil {
+				logrus.Errorf("Error parsing body %+v when handling an error", err.Body, errJson)
+			}
+		}
+		logError(err)
+	default:
+		w.WriteHeader(500)
+		logrus.Errorf("Request %s %s panicked \"%+v\" with stack: \n\n%s\n", r.Method, r.RequestURI, recoveredPanic, debug.Stack())
+	}
+}
+
+func logError(error *Error) {
+	logrus.Errorf("[STATUS %d] Error %w with body:\n %+v", error.StatusCode, error.Error, error.Body)
 }

@@ -18,43 +18,59 @@ func New(s server.Server) *AppointmentHandler {
 	}
 }
 
-func (s *AppointmentHandler) GetAppointmentsHandler(request server.Request) {
-	appointments := s.appointmentService.GetAppointments()
-	request.RespondJSON(http.StatusOK, appointments)
-}
-
-func (s *AppointmentHandler) GetOneAppointmentHandler(request server.Request) {
-	id := request.GetParamUInt("id")
-	appointment := s.appointmentService.GetAppointment(uint(id))
-	if appointment == nil {
-		request.Respond(http.StatusNotFound)
-		return
+func (s *AppointmentHandler) GetAppointmentsHandler(response server.Response, request server.Request) {
+	if appointments, err := s.appointmentService.GetAppointments(); err == nil {
+		response.RespondJSON(http.StatusOK, appointments)
+	} else {
+		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
 	}
-	request.RespondJSON(http.StatusOK, appointment)
 }
 
-func (s *AppointmentHandler) UpdateAppointmentHandler(request server.Request) {
+func (s *AppointmentHandler) GetOneAppointmentHandler(response server.Response, request server.Request) {
+	id := request.GetParamUInt("id")
+	if appointment, err := s.appointmentService.GetAppointment(uint(id)); err == nil {
+		if appointment == nil {
+			response.Respond(http.StatusNotFound)
+			return
+		}
+		response.RespondJSON(http.StatusOK, appointment)
+	} else {
+		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+	}
+}
+
+func (s *AppointmentHandler) UpdateAppointmentHandler(response server.Response, request server.Request) {
 	id := request.GetParamUInt("id")
 	var appointment *models.Appointment
 	request.GetBodyMarshalled(&appointment)
-	appointment = s.appointmentService.UpdateAppointment(uint(id), appointment)
-	if appointment == nil {
-		request.Respond(http.StatusNotFound)
-		return
+	if appointment, err := s.appointmentService.UpdateAppointment(uint(id), appointment); err == nil {
+		if appointment == nil {
+			response.Respond(http.StatusNotFound)
+			return
+		}
+		response.RespondJSON(http.StatusOK, appointment)
+	} else {
+		response.Error(&server.Error{StatusCode: http.StatusInternalServerError})
 	}
-	request.RespondJSON(http.StatusOK, appointment)
+
 }
 
-func (s *AppointmentHandler) CreateAppointmentHandler(request server.Request) {
+func (s *AppointmentHandler) CreateAppointmentHandler(response server.Response, request server.Request) {
 	var appointment *models.Appointment
 	request.GetBodyMarshalled(&appointment)
-	appointment = s.appointmentService.CreateAppointment(appointment, request.GetUser())
-	request.RespondJSON(http.StatusCreated, appointment)
+	if appointment, err := s.appointmentService.CreateAppointment(appointment, request.GetUser()); err == nil {
+		response.RespondJSON(http.StatusCreated, appointment)
+	} else {
+		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+	}
 
 }
 
-func (s *AppointmentHandler) DeleteAppointmentHandler(request server.Request) {
+func (s *AppointmentHandler) DeleteAppointmentHandler(response server.Response, request server.Request) {
 	id := request.GetParamUInt("id")
-	s.appointmentService.DeleteAppointment(uint(id))
-	request.Respond(http.StatusNoContent)
+	if err := s.appointmentService.DeleteAppointment(uint(id)); err == nil {
+		response.Respond(http.StatusNoContent)
+	} else {
+		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+	}
 }

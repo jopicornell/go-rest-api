@@ -105,7 +105,7 @@ func handlePanic(recoveredPanic interface{}, w http.ResponseWriter, r *http.Requ
 		w.WriteHeader(err.StatusCode)
 		if err.Body != nil {
 			if errJson := json.NewEncoder(w).Encode(err.Body); errJson != nil {
-				logrus.Errorf("Error parsing body %+v when handling an error", err.Body, errJson)
+				logrus.Errorf("Error %w parsing body %+v when handling an error", errJson, err.Body)
 			}
 		}
 		logError(err)

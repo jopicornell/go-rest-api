@@ -23,6 +23,10 @@ func NewRouter() Router {
 	return &router{router: mux.NewRouter()}
 }
 
+func AddHandler(handler Handler) {
+	handler.ConfigureRoutes()
+}
+
 func (r *router) AddGroup(path string) Router {
 	return &router{router: r.router.PathPrefix(path).Subrouter()}
 }

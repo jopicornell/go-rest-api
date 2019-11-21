@@ -6,9 +6,9 @@ import (
 
 type HandlerFunc func(Response, Request)
 
-type handler struct{}
-
 type Handler interface {
+	http.Handler
+	ConfigureRoutes()
 }
 
 func HandleHTTP(handler HandlerFunc) http.HandlerFunc {

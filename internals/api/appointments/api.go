@@ -7,6 +7,5 @@ import (
 func Start() {
 	appServer := server.Initialize()
 	defer appServer.Close()
-	ConfigureRoutes(appServer)
 	appServer.ListenAndServe()
 }

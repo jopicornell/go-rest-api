@@ -2,33 +2,35 @@ package handlers
 
 import (
 	"github.com/jopicornell/go-rest-api/internals/api/appointments/services"
+	"github.com/jopicornell/go-rest-api/internals/middlewares"
 	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/pkg/server"
 	"net/http"
 )
 
 type AppointmentHandler struct {
-	server.Handler
+	server             server.Server
 	appointmentService services.AppointmentsService
 }
 
 func New(s server.Server) *AppointmentHandler {
-	return &AppointmentHandler{
+	handler := &AppointmentHandler{
 		appointmentService: services.New(s.GetRelationalDatabase()),
 	}
+	return handler
 }
 
-func (s *AppointmentHandler) GetAppointmentsHandler(response server.Response, request server.Request) {
-	if appointments, err := s.appointmentService.GetAppointments(); err == nil {
+func (a *AppointmentHandler) GetAppointmentsHandler(response server.Response, request server.Request) {
+	if appointments, err := a.appointmentService.GetAppointments(); err == nil {
 		response.RespondJSON(http.StatusOK, appointments)
 	} else {
 		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
 	}
 }
 
-func (s *AppointmentHandler) GetOneAppointmentHandler(response server.Response, request server.Request) {
+func (a *AppointmentHandler) GetOneAppointmentHandler(response server.Response, request server.Request) {
 	id := request.GetParamUInt("id")
-	if appointment, err := s.appointmentService.GetAppointment(uint(id)); err == nil {
+	if appointment, err := a.appointmentService.GetAppointment(uint(id)); err == nil {
 		if appointment == nil {
 			response.Respond(http.StatusNotFound)
 			return
@@ -39,11 +41,11 @@ func (s *AppointmentHandler) GetOneAppointmentHandler(response server.Response, 
 	}
 }
 
-func (s *AppointmentHandler) UpdateAppointmentHandler(response server.Response, request server.Request) {
+func (a *AppointmentHandler) UpdateAppointmentHandler(response server.Response, request server.Request) {
 	id := request.GetParamUInt("id")
 	var appointment *models.Appointment
 	request.GetBodyMarshalled(&appointment)
-	if appointment, err := s.appointmentService.UpdateAppointment(uint(id), appointment); err == nil {
+	if appointment, err := a.appointmentService.UpdateAppointment(uint(id), appointment); err == nil {
 		if appointment == nil {
 			response.Respond(http.StatusNotFound)
 			return
@@ -55,10 +57,10 @@ func (s *AppointmentHandler) UpdateAppointmentHandler(response server.Response, 
 
 }
 
-func (s *AppointmentHandler) CreateAppointmentHandler(response server.Response, request server.Request) {
+func (a *AppointmentHandler) CreateAppointmentHandler(response server.Response, request server.Request) {
 	var appointment *models.Appointment
 	request.GetBodyMarshalled(&appointment)
-	if appointment, err := s.appointmentService.CreateAppointment(appointment, request.GetUser()); err == nil {
+	if appointment, err := a.appointmentService.CreateAppointment(appointment, request.GetUser()); err == nil {
 		response.RespondJSON(http.StatusCreated, appointment)
 	} else {
 		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
@@ -66,11 +68,21 @@ func (s *AppointmentHandler) CreateAppointmentHandler(response server.Response, 
 
 }
 
-func (s *AppointmentHandler) DeleteAppointmentHandler(response server.Response, request server.Request) {
+func (a *AppointmentHandler) DeleteAppointmentHandler(response server.Response, request server.Request) {
 	id := request.GetParamUInt("id")
-	if err := s.appointmentService.DeleteAppointment(uint(id)); err == nil {
+	if err := a.appointmentService.DeleteAppointment(uint(id)); err == nil {
 		response.Respond(http.StatusNoContent)
 	} else {
 		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
 	}
+}
+
+func (a *AppointmentHandler) ConfigureRoutes() {
+	appointments := a.server.GetRouter().AddGroup("/appointments")
+	appointments.Use(middlewares.UserMiddleware(a.server))
+	appointments.AddRoute("", a.GetAppointmentsHandler).Methods("GET")
+	appointments.AddRoute("", a.CreateAppointmentHandler).Methods("POST")
+	appointments.AddRoute("/{id:[0-9]+}", a.DeleteAppointmentHandler).Methods("DELETE")
+	appointments.AddRoute("/{id:[0-9]+}", a.GetOneAppointmentHandler).Methods("GET")
+	appointments.AddRoute("/{id:[0-9]+}", a.UpdateAppointmentHandler).Methods("PUT")
 }

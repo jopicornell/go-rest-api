@@ -10,13 +10,12 @@ import (
 )
 
 type AuthHandler struct {
+	server      server.Server
 	authService services.AuthService
 }
 
-func New(s server.Server) *AuthHandler {
-	return &AuthHandler{
-		authService: services.New(s.GetRelationalDatabase(), s),
-	}
+func (a *AuthHandler) Initialize(s server.Server) {
+	a.authService = services.New(s.GetRelationalDatabase(), s)
 }
 
 func (a *AuthHandler) Login(response server.Response, request server.Request) {
@@ -37,4 +36,10 @@ func (a *AuthHandler) Login(response server.Response, request server.Request) {
 			response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
 		}
 	}
+}
+
+func (a *AuthHandler) ConfigureRoutes() server.Router {
+	group := a.server.GetRouter()
+	group.AddRoute("/login", a.Login).Methods("POST")
+	return group
 }

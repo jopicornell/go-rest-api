@@ -5,7 +5,6 @@ import (
 	goErrors "errors"
 	"github.com/bxcodec/faker/v3"
 	"github.com/jopicornell/go-rest-api/internals/models"
-	"github.com/jopicornell/go-rest-api/pkg/config"
 	"github.com/jopicornell/go-rest-api/pkg/servertesting"
 	"net/http"
 	"net/http/httptest"
@@ -54,10 +53,6 @@ func (ts *AppointmentServiceMock) GetAppointments() ([]models.Appointment, error
 		return nil, ts.errorToThrow
 	}
 	return ts.appointments, nil
-}
-
-func TestAppointmentHandler_New(t *testing.T) {
-	t.Run("should construct a new AppointmentHandler given the server", shouldReturnConstructedHandler)
 }
 
 func TestAppointmentHandler_GetOneAppointmentHandler(t *testing.T) {
@@ -236,20 +231,6 @@ func notFoundIfServiceFoundsNothing(t *testing.T) {
 	handler.GetOneAppointmentHandler(recorder, context)
 	if recorder.Code != http.StatusNotFound {
 		t.Errorf("expected %+v got %+v", http.StatusNotFound, recorder.Code)
-	}
-}
-
-func shouldReturnConstructedHandler(t *testing.T) {
-	serverMock := &servertesting.ServerMock{
-		Config: config.Config{},
-	}
-	appointmentHandler := New(serverMock)
-	if appointmentHandler == nil {
-		t.Errorf("appointment handler should not be null")
-		return
-	}
-	if appointmentHandler.appointmentService == nil {
-		t.Errorf("appointment handler created without the service")
 	}
 }
 

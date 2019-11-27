@@ -3,8 +3,6 @@ package server
 import (
 	"github.com/gorilla/mux"
 	"net/http"
-	"path"
-	"path/filepath"
 )
 
 type router struct {
@@ -12,19 +10,26 @@ type router struct {
 }
 
 type Router interface {
+	http.Handler
 	AddGroup(path string) Router
 	AddRoute(path string, handler HandlerFunc) *mux.Route
 	Use(...mux.MiddlewareFunc)
 	GetInnerRouter() *mux.Router
-	AddStatics(exposePath string, staticPath string)
+	AddHandler(handler Handler)
 }
 
 func NewRouter() Router {
 	return &router{router: mux.NewRouter()}
 }
 
-func AddHandler(handler Handler) {
-	handler.ConfigureRoutes()
+func HandleHTTP(handler HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		handler(NewResponse(w), NewRequest(r))
+	}
+}
+
+func (r *router) AddHandler(handler Handler) {
+	r.router.PathPrefix("").Handler(handler.ConfigureRoutes())
 }
 
 func (r *router) AddGroup(path string) Router {
@@ -39,11 +44,8 @@ func (r *router) Use(middlewares ...mux.MiddlewareFunc) {
 	r.router.Use(middlewares...)
 }
 
-func (r *router) AddStatics(exposePath string, staticPath string) {
-	basePath, _ := filepath.Abs("./")
-	staticPath = path.Join(basePath, staticPath)
-	fileServer := http.FileServer(http.Dir(staticPath))
-	r.router.PathPrefix(exposePath).Handler(http.StripPrefix(exposePath, fileServer))
+func (r *router) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	r.router.ServeHTTP(res, req)
 }
 
 func (r *router) GetInnerRouter() *mux.Router {

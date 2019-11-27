@@ -13,11 +13,20 @@ type AppointmentHandler struct {
 	appointmentService services.AppointmentsService
 }
 
-func New(s server.Server) *AppointmentHandler {
-	handler := &AppointmentHandler{
-		appointmentService: services.New(s.GetRelationalDatabase()),
-	}
-	return handler
+func (a *AppointmentHandler) Initialize(server server.Server) {
+	a.server = server
+	a.appointmentService = services.New(server.GetRelationalDatabase())
+}
+
+func (a *AppointmentHandler) ConfigureRoutes() server.Router {
+	appointments := server.NewRouter().AddGroup("/appointments")
+	appointments.Use(middlewares.UserMiddleware(a.server))
+	appointments.AddRoute("", a.GetAppointmentsHandler).Methods("GET")
+	appointments.AddRoute("", a.CreateAppointmentHandler).Methods("POST")
+	appointments.AddRoute("/{id:[0-9]+}", a.DeleteAppointmentHandler).Methods("DELETE")
+	appointments.AddRoute("/{id:[0-9]+}", a.GetOneAppointmentHandler).Methods("GET")
+	appointments.AddRoute("/{id:[0-9]+}", a.UpdateAppointmentHandler).Methods("PUT")
+	return appointments
 }
 
 func (a *AppointmentHandler) GetAppointmentsHandler(response server.Response, request server.Request) {
@@ -75,14 +84,4 @@ func (a *AppointmentHandler) DeleteAppointmentHandler(response server.Response, 
 	} else {
 		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
 	}
-}
-
-func (a *AppointmentHandler) ConfigureRoutes() {
-	appointments := a.server.GetRouter().AddGroup("/appointments")
-	appointments.Use(middlewares.UserMiddleware(a.server))
-	appointments.AddRoute("", a.GetAppointmentsHandler).Methods("GET")
-	appointments.AddRoute("", a.CreateAppointmentHandler).Methods("POST")
-	appointments.AddRoute("/{id:[0-9]+}", a.DeleteAppointmentHandler).Methods("DELETE")
-	appointments.AddRoute("/{id:[0-9]+}", a.GetOneAppointmentHandler).Methods("GET")
-	appointments.AddRoute("/{id:[0-9]+}", a.UpdateAppointmentHandler).Methods("PUT")
 }

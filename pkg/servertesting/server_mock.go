@@ -54,6 +54,10 @@ func (s *ServerMock) GetRouter() server.Router {
 	return s.Router
 }
 
+func (s *ServerMock) AddHandler(handler server.Handler) {
+	s.Router.AddHandler(handler)
+}
+
 func (s *ServerMock) AddStatics(exposePath string, staticPath string) {
 	basePath, _ := filepath.Abs("./")
 	staticPath = path.Join(basePath, staticPath)

@@ -22,7 +22,7 @@ type Server interface {
 	GetRelationalDatabase() *sqlx.DB
 	GetServerConfig() *config.Server
 	GetRouter() Router
-	AddStatics(string, string)
+	AddHandler(handler Handler)
 	ListenAndServe()
 }
 
@@ -58,6 +58,11 @@ func (s *server) AddStatics(exposePath string, staticPath string) {
 
 func (s *server) GetRouter() Router {
 	return s.Router
+}
+
+func (s *server) AddHandler(handler Handler) {
+	handler.Initialize(s)
+	s.Router.AddHandler(handler)
 }
 
 func (s *server) ListenAndServe() {

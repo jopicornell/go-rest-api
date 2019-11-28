@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"github.com/asaskevich/govalidator"
-	"github.com/jopicornell/go-rest-api/internals/api/auth/requests"
-	"github.com/jopicornell/go-rest-api/internals/api/auth/services"
+	"github.com/jopicornell/go-rest-api/internals/api/requests"
+	"github.com/jopicornell/go-rest-api/internals/api/services"
 	"github.com/jopicornell/go-rest-api/internals/errors"
 	"github.com/jopicornell/go-rest-api/pkg/server"
 	"net/http"
@@ -15,7 +15,7 @@ type AuthHandler struct {
 }
 
 func (a *AuthHandler) Initialize(s server.Server) {
-	a.authService = services.New(s.GetRelationalDatabase(), s)
+	a.authService = services.NewAuthService(s.GetRelationalDatabase(), s)
 }
 
 func (a *AuthHandler) Login(response server.Response, request server.Request) {

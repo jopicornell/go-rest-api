@@ -16,9 +16,9 @@ import (
 	"time"
 )
 
-func TestNew(t *testing.T) {
-	dbMock, _ := mockDB(t)
-	taskService := New(dbMock, servertesting.Initialize(&config.Config{}))
+func TestNewAuthService(t *testing.T) {
+	dbMock, _ := mockAuthDB(t)
+	taskService := NewAuthService(dbMock, servertesting.Initialize(&config.Config{}))
 	if taskService == nil {
 		t.Errorf("New service should not be null")
 	}
@@ -41,8 +41,8 @@ func TestAuthService_Register(t *testing.T) {
 }
 
 func loginErrorNoMatch(t *testing.T) {
-	mockedDb, mock := mockDB(t)
-	authService := New(mockedDb, servertesting.Initialize(&config.Config{}))
+	mockedDb, mock := mockAuthDB(t)
+	authService := NewAuthService(mockedDb, servertesting.Initialize(&config.Config{}))
 	user := "user"
 	password := "password"
 	queryToRun := "SELECT id, name, password, email, active, deleted_at " +
@@ -61,9 +61,9 @@ func loginErrorNoMatch(t *testing.T) {
 }
 
 func loginReturnJWT(t *testing.T) {
-	mockedDb, mock := mockDB(t)
+	mockedDb, mock := mockAuthDB(t)
 	mockedServer := servertesting.Initialize(&config.Config{})
-	authService := New(mockedDb, mockedServer)
+	authService := NewAuthService(mockedDb, mockedServer)
 	user := "user"
 	password := "password"
 	queryToRun := "SELECT id, name, password, email, active, deleted_at " +
@@ -91,9 +91,9 @@ func validateJWT(token string, secret string) error {
 }
 
 func registerSuccessAndReturnUser(t *testing.T) {
-	mockedDb, mock := mockDB(t)
+	mockedDb, mock := mockAuthDB(t)
 	mockedServer := servertesting.Initialize(&config.Config{})
-	authService := New(mockedDb, mockedServer)
+	authService := NewAuthService(mockedDb, mockedServer)
 	mock.ExpectBegin()
 	insertQuery := "INSERT INTO users \\(name, email, password, active\\) VALUES " +
 		"\\(\\?, \\?, \\?, \\?\\)"
@@ -125,7 +125,7 @@ func registerWeakPassword(t *testing.T) {
 
 }
 
-func mockDB(t *testing.T) (*sqlx.DB, sqlmock.Sqlmock) {
+func mockAuthDB(t *testing.T) (*sqlx.DB, sqlmock.Sqlmock) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)

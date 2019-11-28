@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"github.com/jopicornell/go-rest-api/internals/api/appointments/services"
-	"github.com/jopicornell/go-rest-api/internals/middlewares"
+	"github.com/jopicornell/go-rest-api/internals/api/middlewares"
+	"github.com/jopicornell/go-rest-api/internals/api/services"
 	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/pkg/server"
 	"net/http"
@@ -15,7 +15,7 @@ type AppointmentHandler struct {
 
 func (a *AppointmentHandler) Initialize(server server.Server) {
 	a.server = server
-	a.appointmentService = services.New(server.GetRelationalDatabase())
+	a.appointmentService = services.NewAppointmentService(server.GetRelationalDatabase())
 }
 
 func (a *AppointmentHandler) ConfigureRoutes() server.Router {

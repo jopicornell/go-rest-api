@@ -21,7 +21,7 @@ type appointmentService struct {
 
 var AppointmentNullError = errors.New("appointment should not be null")
 
-func New(db *sqlx.DB) AppointmentsService {
+func NewAppointmentService(db *sqlx.DB) AppointmentsService {
 	return &appointmentService{
 		db: db,
 	}

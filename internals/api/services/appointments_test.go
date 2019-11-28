@@ -14,8 +14,8 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	dbMock, _ := mockDB(t)
-	appointmentsService := New(dbMock)
+	dbMock, _ := mockAppointmentsDB(t)
+	appointmentsService := NewAppointmentService(dbMock)
 	if appointmentsService == nil {
 		t.Errorf("New service should not be null")
 	}
@@ -55,8 +55,8 @@ func TestAppointmentService_DeleteAppointment(t *testing.T) {
 }
 
 func getAppointmentsShouldThrowIfDbThrows(t *testing.T) {
-	dbMock, mock := mockDB(t)
-	appointmentService := New(dbMock)
+	dbMock, mock := mockAppointmentsDB(t)
+	appointmentService := NewAppointmentService(dbMock)
 	expected := errors.New("test error")
 	mock.ExpectQuery("SELECT \\* from appointments").WillReturnError(expected)
 
@@ -70,8 +70,8 @@ func getAppointmentsShouldThrowIfDbThrows(t *testing.T) {
 }
 
 func getAppointmentsShouldReturnEmptySliceIfNoRows(t *testing.T) {
-	dbMock, mock := mockDB(t)
-	appointmentService := New(dbMock)
+	dbMock, mock := mockAppointmentsDB(t)
+	appointmentService := NewAppointmentService(dbMock)
 	mock.ExpectQuery("SELECT \\* from appointments").WillReturnRows(&sqlmock.Rows{})
 
 	if got, err := appointmentService.GetAppointments(); got != nil {
@@ -87,8 +87,8 @@ func getAppointmentsShouldReturnEmptySliceIfNoRows(t *testing.T) {
 }
 
 func getAppointmentsShouldReturnListOfAppointments(t *testing.T) {
-	dbMock, mock := mockDB(t)
-	appointmentService := New(dbMock)
+	dbMock, mock := mockAppointmentsDB(t)
+	appointmentService := NewAppointmentService(dbMock)
 	rows := buildAppointmentRows()
 	expected := addAppointmentRows(rows, 5)
 	mock.ExpectQuery("SELECT \\* from appointments").WillReturnRows(rows)
@@ -106,8 +106,8 @@ func getAppointmentsShouldReturnListOfAppointments(t *testing.T) {
 }
 
 func getAppointmentShouldThrowIfDbThrows(t *testing.T) {
-	dbMock, mock := mockDB(t)
-	appointmentService := New(dbMock)
+	dbMock, mock := mockAppointmentsDB(t)
+	appointmentService := NewAppointmentService(dbMock)
 	expected := errors.New("test error")
 	id := uint(1)
 	mock.ExpectQuery("SELECT \\* from appointments").WithArgs(id).WillReturnError(expected)
@@ -122,8 +122,8 @@ func getAppointmentShouldThrowIfDbThrows(t *testing.T) {
 }
 
 func getAppointmentShouldReturnNilIfNoRows(t *testing.T) {
-	dbMock, mock := mockDB(t)
-	appointmentService := New(dbMock)
+	dbMock, mock := mockAppointmentsDB(t)
+	appointmentService := NewAppointmentService(dbMock)
 	id := uint(1)
 	mock.ExpectQuery("SELECT \\* from appointments").WithArgs(id).WillReturnError(sql.ErrNoRows)
 
@@ -137,8 +137,8 @@ func getAppointmentShouldReturnNilIfNoRows(t *testing.T) {
 }
 
 func getAppointmentShouldReturnAppointment(t *testing.T) {
-	dbMock, mock := mockDB(t)
-	appointmentService := New(dbMock)
+	dbMock, mock := mockAppointmentsDB(t)
+	appointmentService := NewAppointmentService(dbMock)
 	rows := buildAppointmentRows()
 	expected := addAppointmentRows(rows, 1)[0]
 	id := uint(1)
@@ -157,8 +157,8 @@ func getAppointmentShouldReturnAppointment(t *testing.T) {
 }
 
 func createAppointmentShouldReturnAppointmentAndCommit(t *testing.T) {
-	dbMock, mock := mockDB(t)
-	appointmentService := New(dbMock)
+	dbMock, mock := mockAppointmentsDB(t)
+	appointmentService := NewAppointmentService(dbMock)
 	appointment := createFakeAppointment()
 	user := servertesting.CreateFakeUser()
 	mock.ExpectBegin()
@@ -187,8 +187,8 @@ func createAppointmentShouldThrowIfDbThrows(t *testing.T) {
 }
 
 func updateAppointmentShouldReturnAppointmentAndCommit(t *testing.T) {
-	dbMock, mock := mockDB(t)
-	appointmentService := New(dbMock)
+	dbMock, mock := mockAppointmentsDB(t)
+	appointmentService := NewAppointmentService(dbMock)
 	appointment := createFakeAppointment()
 	id := uint(1)
 	mock.ExpectBegin()
@@ -209,8 +209,8 @@ func updateAppointmentShouldReturnAppointmentAndCommit(t *testing.T) {
 }
 
 func updateAppointmentShouldThrowIfDbThrows(t *testing.T) {
-	dbMock, mock := mockDB(t)
-	appointmentService := New(dbMock)
+	dbMock, mock := mockAppointmentsDB(t)
+	appointmentService := NewAppointmentService(dbMock)
 	appointment := createFakeAppointment()
 	id := uint(1)
 	expectedError := errors.New("test error")
@@ -232,8 +232,8 @@ func updateAppointmentShouldThrowIfDbThrows(t *testing.T) {
 }
 
 func updateAppointmentShouldThrowIfAppointmentIsNull(t *testing.T) {
-	dbMock, _ := mockDB(t)
-	appointmentService := New(dbMock)
+	dbMock, _ := mockAppointmentsDB(t)
+	appointmentService := NewAppointmentService(dbMock)
 	id := uint(1)
 	if got, err := appointmentService.UpdateAppointment(id, nil); err != nil {
 		if got != nil {
@@ -255,7 +255,7 @@ func deleteAppointmentShouldExecuteAndCommit(t *testing.T) {
 
 }
 
-func mockDB(t *testing.T) (*sqlx.DB, sqlmock.Sqlmock) {
+func mockAppointmentsDB(t *testing.T) (*sqlx.DB, sqlmock.Sqlmock) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)

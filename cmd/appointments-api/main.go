@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/jopicornell/go-rest-api/internals/api/appointments"
+	"github.com/jopicornell/go-rest-api/internals/api"
 )
 
 func main() {
-	appointments.Start()
+	api.Start()
 }

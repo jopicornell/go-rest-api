@@ -21,7 +21,7 @@ type authService struct {
 	server server.Server
 }
 
-func New(db *sqlx.DB, server server.Server) AuthService {
+func NewAuthService(db *sqlx.DB, server server.Server) AuthService {
 	return &authService{
 		db:     db,
 		server: server,

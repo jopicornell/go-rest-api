@@ -13,7 +13,7 @@ var envLoaded bool
 func GetEnv(key string, defaultValue string) string {
 	if !envLoaded {
 		if err := godotenv.Load(); err != nil {
-			log.Print("No .env file found")
+			log.Print("No .env.example file found")
 		}
 	}
 	if value, exists := os.LookupEnv(key); exists {

@@ -6,10 +6,11 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
 	migrationDriver "github.com/golang-migrate/migrate/v4/database"
-	"github.com/golang-migrate/migrate/v4/database/mysql"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jopicornell/go-rest-api/pkg/config"
 	"github.com/jopicornell/go-rest-api/pkg/database"
+	"github.com/sirupsen/logrus"
 	"log"
 	"strconv"
 )
@@ -17,12 +18,12 @@ import (
 func main() {
 	var err error
 	var driver migrationDriver.Driver
-	config := config.Config{}
-	config.Bootstrap()
-	db := database.MySQL{PSN: config.GetDBConfig().PSN}
-	driver, err = mysql.WithInstance(db.GetDB().DB, &mysql.Config{})
+	serverConfig := config.Config{}
+	serverConfig.Bootstrap()
+	db := database.Postgres{PSN: serverConfig.GetDBConfig().PSN}
+	driver, err = postgres.WithInstance(db.GetDB().DB, &postgres.Config{})
 	if err != nil {
-		log.Fatal("Unable to connect to db")
+		logrus.Fatal("Unable to connect to db: %w", err)
 	}
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://db/migrations",

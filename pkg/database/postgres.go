@@ -1,6 +1,7 @@
 package database
 
 import (
+	_ "github.com/jackc/pgx/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -27,7 +28,7 @@ func (m *Postgres) SetDB(dbInstance *sqlx.DB) {
 func (m *Postgres) InitializeDB() *sqlx.DB {
 	var db *sqlx.DB
 	err := Retry(func() (err error) {
-		db, err = sqlx.Open("postgres", m.PSN)
+		db, err = sqlx.Open("pgx", m.PSN)
 		if err != nil {
 			logrus.Errorf("Error connecting to db %s", err)
 		}

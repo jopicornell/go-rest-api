@@ -35,7 +35,7 @@ type Config struct {
 
 func (c *Config) Bootstrap() {
 	if err := godotenv.Load(); err != nil {
-		log.Print("No .env file found")
+		log.Print("No .env.example file found")
 	}
 	c.dbConfig = c.loadDatabaseConfig()
 	c.serverConfig = c.loadServerConfig()

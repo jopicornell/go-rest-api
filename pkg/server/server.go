@@ -29,7 +29,7 @@ type Server interface {
 type server struct {
 	http.Server
 	config.Config
-	relationalDB *database.MySQL
+	relationalDB *database.Postgres
 	Router       Router
 }
 
@@ -95,7 +95,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) initializeRelationalDatabase() *sqlx.DB {
 	if s.relationalDB == nil {
-		s.relationalDB = &database.MySQL{
+		s.relationalDB = &database.Postgres{
 			PSN: s.GetDBConfig().PSN,
 		}
 	}

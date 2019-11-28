@@ -14,8 +14,9 @@ type AuthHandler struct {
 	authService services.AuthService
 }
 
-func (a *AuthHandler) Initialize(s server.Server) {
-	a.authService = services.NewAuthService(s.GetRelationalDatabase(), s)
+func (a *AuthHandler) Initialize(server server.Server) {
+	a.server = server
+	a.authService = services.NewAuthService(server.GetRelationalDatabase(), server)
 }
 
 func (a *AuthHandler) Login(response server.Response, request server.Request) {

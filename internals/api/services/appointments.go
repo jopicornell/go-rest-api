@@ -29,7 +29,7 @@ func NewAppointmentService(db *sqlx.DB) AppointmentsService {
 
 func (s *appointmentService) GetAppointments() (appointments []models.Appointment, err error) {
 	appointments = []models.Appointment{}
-	if err = s.db.Select(&appointments, "SELECT * from appointments"); err != nil {
+	if err = s.db.Select(&appointments, "SELECT * from time_management.appointments"); err != nil {
 		return nil, err
 	}
 	return appointments, nil

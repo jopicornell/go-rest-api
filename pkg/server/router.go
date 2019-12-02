@@ -13,7 +13,7 @@ type Router interface {
 	http.Handler
 	AddGroup(path string) Router
 	AddRoute(path string, handler HandlerFunc) *mux.Route
-	Use(...mux.MiddlewareFunc)
+	Use(...Middleware)
 	GetInnerRouter() *mux.Router
 	AddHandler(handler Handler)
 }
@@ -40,8 +40,18 @@ func (r *router) AddRoute(path string, handler HandlerFunc) *mux.Route {
 	return r.router.HandleFunc(path, HandleHTTP(handler))
 }
 
-func (r *router) Use(middlewares ...mux.MiddlewareFunc) {
-	r.router.Use(middlewares...)
+func (r *router) Use(middlewares ...Middleware) {
+	convertedMiddlewares := make([]mux.MiddlewareFunc, len(middlewares))
+	for index, middleware := range middlewares {
+		convertedMiddlewares[index] = func(handler http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				middleware.Handle(NewResponse(w), NewRequest(r), func(res Response, req Request) {
+					handler.ServeHTTP(res.GetWriter(), req.GetRequest())
+				})
+			})
+		}
+	}
+	r.router.Use(convertedMiddlewares...)
 }
 
 func (r *router) ServeHTTP(res http.ResponseWriter, req *http.Request) {

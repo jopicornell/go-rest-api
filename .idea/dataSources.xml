@@ -22,5 +22,11 @@
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>
       <jdbc-url>jdbc:postgresql://localhost:5432/postgres</jdbc-url>
     </data-source>
+    <data-source source="LOCAL" name="PostgreSQL - palmaactiva@localhost" uuid="71e6f699-a957-4d00-8f45-36dd44b865ca">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://localhost:5432/palmaactiva</jdbc-url>
+    </data-source>
   </component>
 </project>

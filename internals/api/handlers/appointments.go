@@ -20,7 +20,7 @@ func (a *AppointmentHandler) Initialize(server server.Server) {
 
 func (a *AppointmentHandler) ConfigureRoutes() server.Router {
 	appointments := server.NewRouter().AddGroup("/appointments")
-	appointments.Use(middlewares.UserMiddleware(a.server))
+	appointments.Use(&middlewares.UserMiddleware{}, &middlewares.UserMiddleware{})
 	appointments.AddRoute("", a.GetAppointmentsHandler).Methods("GET")
 	appointments.AddRoute("", a.CreateAppointmentHandler).Methods("POST")
 	appointments.AddRoute("/{id:[0-9]+}", a.DeleteAppointmentHandler).Methods("DELETE")

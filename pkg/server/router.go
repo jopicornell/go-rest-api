@@ -29,7 +29,7 @@ func HandleHTTP(handler HandlerFunc) http.HandlerFunc {
 }
 
 func (r *router) AddHandler(handler Handler) {
-	r.router.PathPrefix("").Handler(handler.ConfigureRoutes())
+	handler.ConfigureRoutes(r)
 }
 
 func (r *router) AddGroup(path string) Router {

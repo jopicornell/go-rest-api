@@ -1,31 +1,30 @@
 package database
 
 import (
-	_ "github.com/jackc/pgx/stdlib"
-	"github.com/jmoiron/sqlx"
+	"fmt"
+	"github.com/go-redis/redis/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"log"
 	"time"
 )
 
-type Postgres struct {
-	db  *sqlx.DB
-	PSN string
+type Redis struct {
+	client   *redis.Client
+	Host     string
+	Password string
 }
 
-func (m *Postgres) GetDB() *sqlx.DB {
-	return m.db
-}
-
-func (m *Postgres) SetDB(dbInstance *sqlx.DB) {
-	m.db = dbInstance
-}
-
-func (m *Postgres) InitializeDB() {
-	var db *sqlx.DB
+func (m *Redis) InitializeClient() {
+	var client *redis.Client
 	err := Retry(func() (err error) {
-		db, err = sqlx.Open("pgx", m.PSN)
+		client = redis.NewClient(&redis.Options{
+			Addr:     fmt.Sprintf("localhost:6379"),
+			Password: "",
+			DB:       0,
+		})
+		err = client.Ping().Err()
+
 		if err != nil {
 			logrus.Errorf("Error connecting to client %s", err)
 		}
@@ -35,7 +34,6 @@ func (m *Postgres) InitializeDB() {
 		wrapError := errors.Wrap(err, "some problem with initializing relational client")
 		log.Fatal(wrapError.Error())
 	}
-	log.Println("New connection to postgres")
-	db.SetMaxOpenConns(10)
-	m.db = db
+	log.Println("New connection to redis")
+	m.client = client
 }

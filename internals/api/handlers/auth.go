@@ -32,15 +32,13 @@ func (a *AuthHandler) Login(response server.Response, request server.Request) {
 	} else {
 		switch err {
 		case errors.AuthUserNotMatched:
-			response.Respond(http.StatusForbidden)
+			response.Respond(http.StatusUnauthorized)
 		default:
 			response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
 		}
 	}
 }
 
-func (a *AuthHandler) ConfigureRoutes() server.Router {
-	group := a.server.GetRouter()
-	group.AddRoute("/login", a.Login).Methods("POST")
-	return group
+func (a *AuthHandler) ConfigureRoutes(router server.Router) {
+	router.AddRoute("/login", a.Login).Methods("POST")
 }

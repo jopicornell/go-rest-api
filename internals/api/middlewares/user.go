@@ -9,6 +9,5 @@ type UserMiddleware struct {
 }
 
 func (u *UserMiddleware) Handle(res server.Response, req server.Request, next server.HandlerFunc) {
-	println("handling")
 	next(res, req)
 }

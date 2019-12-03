@@ -28,7 +28,7 @@ func Initialize(cfg *config.Config) *ServerMock {
 type ServerMock struct {
 	http.Server
 	config.Config
-	relationalDB *database.MySQL
+	relationalDB *database.Postgres
 	Router       server.Router
 }
 
@@ -48,6 +48,11 @@ func (s *ServerMock) GetServerConfig() *config.Server {
 func (s *ServerMock) GetRelationalDatabase() *sqlx.DB {
 	db, _, _ := sqlmock.New()
 	return sqlx.NewDb(db, "mock")
+}
+
+func (s *ServerMock) GetCache() database.Cache {
+
+	return nil
 }
 
 func (s *ServerMock) GetRouter() server.Router {

@@ -18,8 +18,8 @@ import (
 
 type Server interface {
 	http.Handler
+	database.ManagesDatabases
 	Close()
-	GetRelationalDatabase() *sqlx.DB
 	GetServerConfig() *config.Server
 	GetRouter() Router
 	AddHandler(handler Handler)
@@ -30,13 +30,14 @@ type server struct {
 	http.Server
 	config.Config
 	relationalDB *database.Postgres
+	cache        database.Cache
 	Router       Router
 }
 
 func Initialize() Server {
 	server := &server{}
 	server.Config.Bootstrap()
-	server.initializeRelationalDatabase()
+	server.initializeDatabases()
 	server.Router = NewRouter()
 	server.Server = http.Server{
 		Addr:    ":" + server.GetServerConfig().Port,
@@ -47,6 +48,10 @@ func Initialize() Server {
 
 func (s *server) GetRelationalDatabase() *sqlx.DB {
 	return s.relationalDB.GetDB()
+}
+
+func (s *server) GetCache() database.Cache {
+	return s.cache
 }
 
 func (s *server) AddStatics(exposePath string, staticPath string) {
@@ -93,13 +98,20 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	println(fmt.Sprintf("Request %s %s took %s", r.Method, r.RequestURI, duration.String()))
 }
 
-func (s *server) initializeRelationalDatabase() *sqlx.DB {
+func (s *server) initializeDatabases() {
 	if s.relationalDB == nil {
 		s.relationalDB = &database.Postgres{
 			PSN: s.GetDBConfig().PSN,
 		}
+		s.relationalDB.InitializeDB()
 	}
-	return s.relationalDB.GetDB()
+	if s.cache == nil {
+		s.cache = &database.Redis{
+			Host:     s.Config.GetRedisConfig().Host,
+			Password: s.Config.GetRedisConfig().Password,
+		}
+		s.cache.InitializeClient()
+	}
 }
 
 func handlePanic(recoveredPanic interface{}, w http.ResponseWriter, r *http.Request) {

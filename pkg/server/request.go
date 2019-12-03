@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -42,6 +43,20 @@ func (r *request) GetRequest() *http.Request {
 func (r *request) GetUser() *models.User {
 	user := r.Request.Context().Value(UserContextKey).(models.User)
 	return &user
+}
+
+func (r *request) SetUser(user *models.User) {
+	newContext := context.WithValue(r.Request.Context(), UserContextKey, &user)
+	r.Request = r.Request.WithContext(newContext)
+}
+
+func (r *request) SetContextKey(key string, value interface{}) {
+	newContext := context.WithValue(r.Request.Context(), key, value)
+	r.Request = r.Request.WithContext(newContext)
+}
+
+func (r *request) GetContextKey(key string, value interface{}) {
+	value = r.Request.Context().Value(key)
 }
 
 func (r *request) GetBody() []byte {

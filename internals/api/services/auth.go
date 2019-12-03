@@ -1,7 +1,9 @@
 package services
 
 import (
+	"crypto/sha512"
 	"database/sql"
+	"fmt"
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/jmoiron/sqlx"
 	"github.com/jopicornell/go-rest-api/internals/errors"
@@ -9,6 +11,7 @@ import (
 	"github.com/jopicornell/go-rest-api/pkg/server"
 	"golang.org/x/crypto/bcrypt"
 	"strconv"
+	"time"
 )
 
 type AuthService interface {
@@ -29,18 +32,14 @@ func NewAuthService(db *sqlx.DB, server server.Server) AuthService {
 }
 
 func (s *authService) Login(email string, password string) (token *models.Token, err error) {
-	query := "SELECT id, name, password, email, active, deleted_at FROM users " +
-		"WHERE email = ?"
+	query := "SELECT id, name, password, email, active, deleted_at FROM auth.users " +
+		"WHERE email = $1"
 	var user models.User
 	if err := s.db.Get(&user, query, email); err == nil {
 		if err := bcrypt.CompareHashAndPassword(user.Password, []byte(password)); err != nil {
 			return nil, errors.AuthUserNotMatched
 		}
-		var hs = jwt.NewHS512([]byte(s.server.GetServerConfig().JWTSecret))
-		token, err := jwt.Sign(configurePayload(user.ID), hs)
-		if err != nil {
-			return nil, err
-		}
+		token := sha512.New().Sum([]byte(fmt.Sprintf("%d;%s;%d", user.ID, user.Password, time.Now().Nanosecond())))
 		return &models.Token{Token: string(token)}, nil
 	} else {
 		if err == sql.ErrNoRows {
@@ -52,7 +51,7 @@ func (s *authService) Login(email string, password string) (token *models.Token,
 
 func (s *authService) Register(user models.User) (_ *models.User, err error) {
 	tx := s.db.MustBegin()
-	insertStatement := "INSERT INTO users (name, email, password, active) VALUES (?, ?, ?, ?)"
+	insertStatement := "INSERT INTO users (name, email, password, active) VALUES ($1, $2, $3, $4)"
 	if _, err = tx.Exec(insertStatement, user.Name, user.Email, user.Password, true); err == nil {
 		queryToRun := "SELECT id, name, email, active, deleted_at " +
 			"FROM users WHERE id = LAST_INSERT_ID()"

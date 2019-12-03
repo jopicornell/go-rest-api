@@ -12,6 +12,11 @@ type Database struct {
 	Timeout    int
 }
 
+type Redis struct {
+	Host     string
+	Password string
+}
+
 type JWT struct {
 	Secret           string
 	Duration         int
@@ -29,6 +34,7 @@ type Server struct {
 
 type Config struct {
 	dbConfig     *Database
+	redisConfig  *Redis
 	serverConfig *Server
 	bootstraped  bool
 }
@@ -38,6 +44,7 @@ func (c *Config) Bootstrap() {
 		log.Print("No .env.example file found")
 	}
 	c.dbConfig = c.loadDatabaseConfig()
+	c.redisConfig = c.loadRedisConfig()
 	c.serverConfig = c.loadServerConfig()
 	c.bootstraped = true
 }
@@ -47,6 +54,13 @@ func (c *Config) loadDatabaseConfig() *Database {
 		PSN:        environment.GetEnv("DATABASE_PSN", "root@(localhost)/test?charset=utf8&parseTime=True&loc=Local"),
 		LogQueries: environment.GetEnvAsBool("DATABASE_LOG", false),
 		Timeout:    environment.GetEnvAsInt("DATABASE_TIMEOUT", 0),
+	}
+}
+
+func (c *Config) loadRedisConfig() *Redis {
+	return &Redis{
+		Host:     environment.GetEnv("REDIS_HOST", "localhost:6379"),
+		Password: environment.GetEnv("REDIS_PASSWORD", "false"),
 	}
 }
 
@@ -61,6 +75,10 @@ func (c *Config) loadServerConfig() *Server {
 
 func (c *Config) GetDBConfig() *Database {
 	return c.dbConfig
+}
+
+func (c *Config) GetRedisConfig() *Redis {
+	return c.redisConfig
 }
 
 func (c *Config) GetServerConfig() *Server {

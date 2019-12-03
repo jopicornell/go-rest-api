@@ -18,15 +18,14 @@ func (a *AppointmentHandler) Initialize(server server.Server) {
 	a.appointmentService = services.NewAppointmentService(server.GetRelationalDatabase())
 }
 
-func (a *AppointmentHandler) ConfigureRoutes() server.Router {
-	appointments := server.NewRouter().AddGroup("/appointments")
+func (a *AppointmentHandler) ConfigureRoutes(router server.Router) {
+	appointments := router.AddGroup("/appointments")
 	appointments.Use(&middlewares.UserMiddleware{}, &middlewares.UserMiddleware{})
 	appointments.AddRoute("", a.GetAppointmentsHandler).Methods("GET")
 	appointments.AddRoute("", a.CreateAppointmentHandler).Methods("POST")
 	appointments.AddRoute("/{id:[0-9]+}", a.DeleteAppointmentHandler).Methods("DELETE")
 	appointments.AddRoute("/{id:[0-9]+}", a.GetOneAppointmentHandler).Methods("GET")
 	appointments.AddRoute("/{id:[0-9]+}", a.UpdateAppointmentHandler).Methods("PUT")
-	return appointments
 }
 
 func (a *AppointmentHandler) GetAppointmentsHandler(response server.Response, request server.Request) {

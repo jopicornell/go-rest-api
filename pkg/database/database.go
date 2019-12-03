@@ -5,5 +5,6 @@ import (
 )
 
 type ManagesDatabases interface {
-	GetRelationalDB() *sqlx.DB
+	GetRelationalDatabase() *sqlx.DB
+	GetCache() Cache
 }

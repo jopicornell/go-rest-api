@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	"github.com/asaskevich/govalidator"
 	"github.com/jopicornell/go-rest-api/internals/api/requests"
 	"github.com/jopicornell/go-rest-api/internals/api/services"
 	"github.com/jopicornell/go-rest-api/internals/errors"
 	"github.com/jopicornell/go-rest-api/pkg/server"
+	"github.com/jopicornell/go-rest-api/pkg/utilities"
+	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -19,12 +20,17 @@ func (a *AuthHandler) Initialize(server server.Server) {
 	a.authService = services.NewAuthService(server.GetRelationalDatabase(), server)
 }
 
-func (a *AuthHandler) Login(response server.Response, request server.Request) {
+func (a *AuthHandler) ConfigureRoutes(router server.Router) {
+	router.AddRoute("/login", a.Login).Methods("POST")
+	router.AddRoute("/register", a.Register).Methods("POST")
+}
+
+func (a *AuthHandler) Login(response server.Response, request server.Context) {
 	var loginRequest requests.LoginRequest
 	request.GetBodyMarshalled(&loginRequest)
-	valid, err := govalidator.ValidateStruct(loginRequest)
-	if err != nil || !valid {
-		response.Respond(http.StatusBadRequest)
+	err := utilities.ValidateStruct(loginRequest)
+	if err != nil {
+		response.RespondValidationErrors(http.StatusBadRequest, err)
 		return
 	}
 	if token, err := a.authService.Login(loginRequest.Email, loginRequest.Password); err == nil {
@@ -39,6 +45,17 @@ func (a *AuthHandler) Login(response server.Response, request server.Request) {
 	}
 }
 
-func (a *AuthHandler) ConfigureRoutes(router server.Router) {
-	router.AddRoute("/login", a.Login).Methods("POST")
+func (a *AuthHandler) Register(response server.Response, context server.Context) {
+	var registerRequest requests.RegisterRequest
+	context.GetBodyMarshalled(&registerRequest)
+	err := utilities.ValidateStruct(registerRequest)
+	if err != nil {
+		response.RespondJSON(http.StatusBadRequest, err)
+	}
+	if user, err := a.authService.Register(registerRequest.TransformToUser()); err == nil {
+		response.RespondJSON(http.StatusOK, user)
+	} else {
+		logrus.Error(err)
+		response.Respond(http.StatusBadRequest)
+	}
 }

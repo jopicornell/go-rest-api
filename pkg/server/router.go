@@ -45,7 +45,7 @@ func (r *router) Use(middlewares ...Middleware) {
 	for index, middleware := range middlewares {
 		convertedMiddlewares[index] = func(handler http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				middleware.Handle(NewResponse(w), NewRequest(r), func(res Response, req Request) {
+				middleware.Handle(NewResponse(w), NewRequest(r), func(res Response, req Context) {
 					handler.ServeHTTP(res.GetWriter(), req.GetRequest())
 				})
 			})

@@ -28,7 +28,7 @@ func (a *AppointmentHandler) ConfigureRoutes(router server.Router) {
 	appointments.AddRoute("/{id:[0-9]+}", a.UpdateAppointmentHandler).Methods("PUT")
 }
 
-func (a *AppointmentHandler) GetAppointmentsHandler(response server.Response, request server.Request) {
+func (a *AppointmentHandler) GetAppointmentsHandler(response server.Response, request server.Context) {
 	if appointments, err := a.appointmentService.GetAppointments(); err == nil {
 		response.RespondJSON(http.StatusOK, appointments)
 	} else {
@@ -36,7 +36,7 @@ func (a *AppointmentHandler) GetAppointmentsHandler(response server.Response, re
 	}
 }
 
-func (a *AppointmentHandler) GetOneAppointmentHandler(response server.Response, request server.Request) {
+func (a *AppointmentHandler) GetOneAppointmentHandler(response server.Response, request server.Context) {
 	id := request.GetParamUInt("id")
 	if appointment, err := a.appointmentService.GetAppointment(uint(id)); err == nil {
 		if appointment == nil {
@@ -49,7 +49,7 @@ func (a *AppointmentHandler) GetOneAppointmentHandler(response server.Response, 
 	}
 }
 
-func (a *AppointmentHandler) UpdateAppointmentHandler(response server.Response, request server.Request) {
+func (a *AppointmentHandler) UpdateAppointmentHandler(response server.Response, request server.Context) {
 	id := request.GetParamUInt("id")
 	var appointment *models.Appointment
 	request.GetBodyMarshalled(&appointment)
@@ -65,7 +65,7 @@ func (a *AppointmentHandler) UpdateAppointmentHandler(response server.Response, 
 
 }
 
-func (a *AppointmentHandler) CreateAppointmentHandler(response server.Response, request server.Request) {
+func (a *AppointmentHandler) CreateAppointmentHandler(response server.Response, request server.Context) {
 	var appointment *models.Appointment
 	request.GetBodyMarshalled(&appointment)
 	if appointment, err := a.appointmentService.CreateAppointment(appointment, request.GetUser()); err == nil {
@@ -76,7 +76,7 @@ func (a *AppointmentHandler) CreateAppointmentHandler(response server.Response, 
 
 }
 
-func (a *AppointmentHandler) DeleteAppointmentHandler(response server.Response, request server.Request) {
+func (a *AppointmentHandler) DeleteAppointmentHandler(response server.Response, request server.Context) {
 	id := request.GetParamUInt("id")
 	if err := a.appointmentService.DeleteAppointment(uint(id)); err == nil {
 		response.Respond(http.StatusNoContent)

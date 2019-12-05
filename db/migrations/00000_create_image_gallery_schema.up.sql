@@ -1,0 +1,1 @@
+CREATE SCHEMA image_gallery;

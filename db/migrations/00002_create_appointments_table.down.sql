@@ -1,1 +1,1 @@
-DROP TABLE appointments;
+DROP TABLE image_gallery.images;

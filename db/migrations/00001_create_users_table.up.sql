@@ -1,10 +1,11 @@
-CREATE TABLE IF NOT EXISTS auth.users (
-                                     id SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS image_gallery.users (
+                                     user_id SERIAL PRIMARY KEY,
+                                     username VARCHAR(255) NOT NULL,
                                      email VARCHAR(255) NOT NULL,
-                                     name VARCHAR(255) NOT NULL,
+                                     full_name VARCHAR(255) NOT NULL,
                                      password BYTEA,
-                                     created_at TIMESTAMP DEFAULT NOW(),
-                                     updated_at TIMESTAMP DEFAULT NOW(),
-                                     deleted_at TIMESTAMP DEFAULT NOW(),
-                                     active BOOL NOT NULL
+                                     num_pictures INT,
+                                     num_comments INT,
+                                     num_likes INT,
+                                     avatar_id INT
 );

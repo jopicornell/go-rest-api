@@ -45,9 +45,7 @@ func loginErrorNoMatch(t *testing.T) {
 	authService := NewAuthService(mockedDb, servertesting.Initialize(&config.Config{}))
 	user := "user"
 	password := "password"
-	queryToRun := "SELECT id, name, password, email, active, deleted_at " +
-		"FROM users WHERE email = \\?"
-	mock.ExpectQuery(queryToRun).WillReturnRows(&sqlmock.Rows{})
+	mock.ExpectQuery(".*").WillReturnRows(&sqlmock.Rows{})
 	if got, err := authService.Login(user, password); err != nil {
 		if got != nil {
 			t.Errorf("expected return %+v to be nil", got)
@@ -66,11 +64,9 @@ func loginReturnJWT(t *testing.T) {
 	authService := NewAuthService(mockedDb, mockedServer)
 	user := "user"
 	password := "password"
-	queryToRun := "SELECT id, name, password, email, active, deleted_at " +
-		"FROM users WHERE email = \\?"
 	rows := buildUserRows(true)
 	_ = addUserRows(rows, []byte(password), 1)
-	mock.ExpectQuery(queryToRun).WillReturnRows(rows)
+	mock.ExpectQuery(".*").WillReturnRows(rows)
 	if got, err := authService.Login(user, password); err == nil {
 		if got == nil {
 			t.Errorf("expected return not to be nil")
@@ -104,7 +100,7 @@ func registerSuccessAndReturnUser(t *testing.T) {
 		"FROM users WHERE id = LAST_INSERT_ID()"
 	mock.ExpectQuery(queryToRun).WillReturnRows(rows)
 	mock.ExpectCommit()
-	if got, err := authService.Register(users[0]); err == nil {
+	if got, err := authService.Register(&users[0]); err == nil {
 		if !reflect.DeepEqual(*got, users[0]) {
 			t.Errorf("expected return user %+v to be %+v", got, &users[0])
 		}

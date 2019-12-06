@@ -21,6 +21,7 @@ func main() {
 	serverConfig := config.Config{}
 	serverConfig.Bootstrap()
 	db := database.Postgres{PSN: serverConfig.GetDBConfig().PSN}
+	db.InitializeDB()
 	driver, err = postgres.WithInstance(db.GetDB().DB, &postgres.Config{})
 	if err != nil {
 		logrus.Fatal("Unable to connect to db: %w", err)
@@ -52,6 +53,17 @@ func main() {
 			log.Fatal("error: can't read version")
 		}
 		if err = m.Migrate(uint(version)); err != nil {
+			handleMigrationErr(err)
+		}
+	case "force":
+		if flag.Arg(1) == "" {
+			log.Fatal("error: please specify version argument V")
+		}
+		version, err := strconv.ParseInt(flag.Arg(1), 10, 64)
+		if err != nil {
+			log.Fatal("error: can't read version")
+		}
+		if err = m.Force(int(version)); err != nil {
 			handleMigrationErr(err)
 		}
 	default:

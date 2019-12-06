@@ -9,6 +9,6 @@ func Start() {
 	appServer := server.Initialize()
 	defer appServer.Close()
 	appServer.AddHandler(&handlers.AuthHandler{})
-	appServer.AddHandler(&handlers.AppointmentHandler{})
+	appServer.AddHandler(&handlers.PictureHandler{})
 	appServer.ListenAndServe()
 }

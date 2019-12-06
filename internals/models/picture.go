@@ -6,7 +6,7 @@ import (
 
 const StatusPending = "pending"
 
-type Appointment struct {
+type Picture struct {
 	ID         uint16        `json:"id" db:"id"`
 	StartDate  time.Time     `json:"startDate"  db:"start_date"`
 	Duration   time.Duration `json:"duration"  db:"duration"`

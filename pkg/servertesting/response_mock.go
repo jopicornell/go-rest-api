@@ -2,6 +2,7 @@ package servertesting
 
 import (
 	"encoding/json"
+	"github.com/go-playground/validator/v10"
 	"github.com/jopicornell/go-rest-api/pkg/server"
 	"net/http"
 	"net/http/httptest"
@@ -28,6 +29,22 @@ func (r *ResponseMock) RespondJSON(statusCode int, ifc interface{}) {
 	r.ResponseRecorder.WriteHeader(statusCode)
 	if err := json.NewEncoder(r).Encode(ifc); err == nil {
 	} else {
+		panic(err)
+	}
+}
+
+//responds with the parsed interface to JSON
+func (r *ResponseMock) RespondValidationErrors(statusCode int, errors validator.ValidationErrors) {
+	r.ResponseRecorder.Header().Add("Content-Type", "application/json")
+	r.ResponseRecorder.WriteHeader(statusCode)
+	validationErrors := make(map[string]map[string]string)
+	for _, validatorError := range errors {
+		if validationErrors[validatorError.Namespace()] == nil {
+			validationErrors[validatorError.Namespace()] = make(map[string]string)
+		}
+		validationErrors[validatorError.Namespace()][validatorError.Tag()] = validatorError.Translate(nil)
+	}
+	if err := json.NewEncoder(r).Encode(validationErrors); err != nil {
 		panic(err)
 	}
 }

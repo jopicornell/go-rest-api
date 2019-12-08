@@ -1,15 +1,15 @@
-ALTER TABLE image_gallery.pictures
+ALTER TABLE image_gallery.picture
     DROP CONSTRAINT pictures_users_fk,
     DROP CONSTRAINT images_pictures_fk;
 
-ALTER TABLE image_gallery.users
+ALTER TABLE image_gallery.customer
     DROP CONSTRAINT images_users_fk;
 
-ALTER TABLE image_gallery.likes
+ALTER TABLE image_gallery.like
     DROP CONSTRAINT likes_users_fk,
     DROP CONSTRAINT likes_pictures_fk;
 
-ALTER TABLE image_gallery.comments
+ALTER TABLE image_gallery.comment
     DROP CONSTRAINT comments_users_fk,
     DROP CONSTRAINT comments_pictures_fk;
 

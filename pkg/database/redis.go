@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis/v7"
 	"github.com/pkg/errors"
@@ -15,7 +16,7 @@ type Redis struct {
 	Password string
 }
 
-func (m *Redis) InitializeClient() {
+func (r *Redis) InitializeClient() {
 	var client *redis.Client
 	err := Retry(func() (err error) {
 		client = redis.NewClient(&redis.Options{
@@ -35,5 +36,27 @@ func (m *Redis) InitializeClient() {
 		log.Fatal(wrapError.Error())
 	}
 	log.Println("New connection to redis")
-	m.client = client
+	r.client = client
+}
+
+func (r *Redis) GetStruct(key string, ifc interface{}) {
+	cmd := r.client.Get(key)
+	if cmd.Err() != nil {
+		panic(cmd.Err())
+	}
+	if err := json.Unmarshal([]byte(cmd.Val()), ifc); err != nil {
+		panic(err)
+	}
+}
+
+func (r *Redis) SetStruct(key string, m interface{}) {
+	var cmd *redis.StatusCmd
+	if bytes, err := json.Marshal(&m); err != nil {
+		panic(err)
+	} else {
+		cmd = r.client.Set(key, string(bytes), time.Hour*24*7)
+	}
+	if cmd.Err() != nil {
+		panic(cmd.Err())
+	}
 }

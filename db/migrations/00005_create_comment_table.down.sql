@@ -1,1 +1,1 @@
-drop table image_gallery.comments;
+drop table image_gallery.comment;

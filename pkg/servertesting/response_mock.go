@@ -33,6 +33,15 @@ func (r *ResponseMock) RespondJSON(statusCode int, ifc interface{}) {
 	}
 }
 
+//responds with the text
+func (r *ResponseMock) RespondText(statusCode int, content string) {
+	r.ResponseRecorder.Header().Add("Content-Type", "text/plain")
+	r.ResponseRecorder.WriteHeader(statusCode)
+	if _, err := r.ResponseRecorder.Write([]byte(content)); err != nil {
+		panic(err)
+	}
+}
+
 //responds with the parsed interface to JSON
 func (r *ResponseMock) RespondValidationErrors(statusCode int, errors validator.ValidationErrors) {
 	r.ResponseRecorder.Header().Add("Content-Type", "application/json")

@@ -18,21 +18,26 @@ type innerContext struct {
 	Request        *http.Request
 	PathParameters map[string]string
 	user           *models.User
+	server         Server
 }
 
 type Context interface {
 	GetPathParameters() map[string]string
 	GetParamUInt(param string) uint
+	GetParamInt(param string) int
 	GetRequest() *http.Request
-	GetUser() *models.User
+	GetUser() interface{}
+	SetUser(user interface{})
+	GetServer() Server
 	GetBody() []byte
 	GetBodyMarshalled(interface{})
 }
 
-func NewRequest(req *http.Request) *innerContext {
+func NewContext(req *http.Request, server Server) *innerContext {
 	return &innerContext{
 		Request:        req,
 		PathParameters: mux.Vars(req),
+		server:         server,
 	}
 }
 
@@ -40,13 +45,17 @@ func (r *innerContext) GetRequest() *http.Request {
 	return r.Request
 }
 
-func (r *innerContext) GetUser() *models.User {
-	user := r.Request.Context().Value(UserContextKey).(models.User)
-	return &user
+func (r *innerContext) GetServer() Server {
+	return r.server
 }
 
-func (r *innerContext) SetUser(user *models.User) {
-	newContext := context.WithValue(r.Request.Context(), UserContextKey, &user)
+func (r *innerContext) GetUser() interface{} {
+	user := r.Request.Context().Value(UserContextKey)
+	return user
+}
+
+func (r *innerContext) SetUser(user interface{}) {
+	newContext := context.WithValue(r.Request.Context(), UserContextKey, user)
 	r.Request = r.Request.WithContext(newContext)
 }
 
@@ -85,6 +94,14 @@ func (r *innerContext) GetParam(param string) string {
 func (r *innerContext) GetParamUInt(param string) uint {
 	if value, err := strconv.Atoi(r.PathParameters[param]); err == nil {
 		return uint(value)
+	} else {
+		panic(err)
+	}
+}
+
+func (r *innerContext) GetParamInt(param string) int {
+	if value, err := strconv.Atoi(r.PathParameters[param]); err == nil {
+		return value
 	} else {
 		panic(err)
 	}

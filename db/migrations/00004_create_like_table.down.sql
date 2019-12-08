@@ -1,1 +1,1 @@
-drop table image_gallery.likes;
+drop table image_gallery.like;

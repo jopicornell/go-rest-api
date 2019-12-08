@@ -23,6 +23,7 @@ type Server interface {
 	GetServerConfig() *config.Server
 	GetRouter() Router
 	AddHandler(handler Handler)
+	AddStatics(path string, staticPath string)
 	ListenAndServe()
 }
 
@@ -38,7 +39,7 @@ func Initialize() Server {
 	server := &server{}
 	server.Config.Bootstrap()
 	server.initializeDatabases()
-	server.Router = NewRouter()
+	server.Router = NewRouter(server)
 	server.Server = http.Server{
 		Addr:    ":" + server.GetServerConfig().Port,
 		Handler: server,

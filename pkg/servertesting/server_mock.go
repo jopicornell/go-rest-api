@@ -1,6 +1,7 @@
 package servertesting
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
@@ -17,7 +18,7 @@ import (
 func Initialize(cfg *config.Config) *ServerMock {
 	serverMock := new(ServerMock)
 	serverMock.Config = *cfg
-	serverMock.Router = server.NewRouter()
+	serverMock.Router = server.NewRouter(serverMock)
 	serverMock.Server = http.Server{
 		Addr:    ":" + serverMock.GetServerConfig().Port,
 		Handler: serverMock,
@@ -29,6 +30,7 @@ type ServerMock struct {
 	http.Server
 	config.Config
 	relationalDB *database.Postgres
+	mockDB       sqlmock.Sqlmock
 	Router       server.Router
 }
 
@@ -46,8 +48,13 @@ func (s *ServerMock) GetServerConfig() *config.Server {
 }
 
 func (s *ServerMock) GetRelationalDatabase() *sqlx.DB {
-	db, _, _ := sqlmock.New()
+	var db *sql.DB
+	db, s.mockDB, _ = sqlmock.New()
 	return sqlx.NewDb(db, "mock")
+}
+
+func (s *ServerMock) GetMockDb() sqlmock.Sqlmock {
+	return s.mockDB
 }
 
 func (s *ServerMock) GetCache() database.Cache {

@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func TestNew(t *testing.T) {
+func TestNewPictureService(t *testing.T) {
 	dbMock, _ := mockPicturesDB(t)
 	picturesService := NewPictureService(dbMock)
 	if picturesService == nil {
@@ -163,7 +163,7 @@ func createPictureShouldReturnPictureAndCommit(t *testing.T) {
 	user := servertesting.CreateFakeUser()
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO pictures (.*)").WithArgs(
-		picture.StartDate, picture.Duration, picture.EndDate, picture.Status, user.ID,
+		picture.StartDate, picture.Duration, picture.EndDate, picture.Status, user.UserID,
 	).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 	if got, err := pictureService.CreatePicture(picture, user); err == nil {

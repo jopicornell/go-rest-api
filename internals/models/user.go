@@ -1,16 +1,29 @@
 package models
 
 import (
-	"gopkg.in/guregu/null.v3"
+	"github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/model"
+	"strings"
 )
 
+const USER_ROLE = "user"
+
 type User struct {
-	ID        uint      `json:"id"`
-	Name      string    `json:"name"  db:"name"`
-	Password  []byte    `json:"-" db:"password"`
-	Email     string    `json:"email"  db:"email"`
-	Active    bool      `json:"active"  db:"active"`
-	CreatedAt null.Time `json:"created_at" db:"created_at"`
-	UpdatedAt null.Time `json:"updated_at" db:"updated_at"`
-	DeletedAt null.Time `json:"deleted_at" db:"deleted_at"`
+	model.Customer
+}
+
+type CustomerWithRoles struct {
+	model.Customer
+	Roles []model.CustomerHasRoles
+}
+
+func (cwr *CustomerWithRoles) GetRoles() []string {
+	roles := make([]string, 0)
+	for _, role := range cwr.Roles {
+		roles = append(roles, role.Role)
+	}
+	return roles
+}
+
+func (cwr *CustomerWithRoles) GetRolesString(separator string) string {
+	return strings.Join(cwr.GetRoles(), separator)
 }

@@ -2,9 +2,9 @@ package servertesting
 
 import (
 	"encoding/json"
+	"github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/model"
 	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/pkg/server"
-	"gopkg.in/guregu/null.v3"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -69,13 +69,15 @@ func (r *RequestMock) GetParamUInt(param string) uint {
 
 func CreateFakeUser() *models.User {
 	return &models.User{
-		ID:        10,
-		Name:      "name",
-		Password:  []byte("hashedPassword"),
-		Email:     "email@test.test",
-		Active:    true,
-		CreatedAt: null.Time{},
-		UpdatedAt: null.Time{},
-		DeletedAt: null.Time{},
+		Customer: model.Customer{
+			UserID:      10,
+			Username:    "",
+			FullName:    "name",
+			Password:    "password",
+			NumPictures: 0,
+			NumComments: 0,
+			NumLikes:    0,
+			AvatarID:    nil,
+		},
 	}
 }

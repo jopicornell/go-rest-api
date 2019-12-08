@@ -39,3 +39,21 @@ func (m *Postgres) InitializeDB() {
 	db.SetMaxOpenConns(10)
 	m.db = db
 }
+
+func InitializeDB(PSN string) *sqlx.DB {
+	var db *sqlx.DB
+	err := Retry(func() (err error) {
+		db, err = sqlx.Open("pgx", PSN)
+		if err != nil {
+			logrus.Errorf("Error connecting to client %s", err)
+		}
+		return err
+	}, time.Second*15, time.Minute*5)
+	if err != nil {
+		wrapError := errors.Wrap(err, "some problem with initializing relational client")
+		log.Fatal(wrapError.Error())
+	}
+	log.Println("New connection to postgres")
+	db.SetMaxOpenConns(10)
+	return db
+}

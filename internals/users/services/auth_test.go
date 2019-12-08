@@ -5,15 +5,14 @@ import (
 	"github.com/bxcodec/faker/v3"
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/jmoiron/sqlx"
+	"github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/model"
 	"github.com/jopicornell/go-rest-api/internals/errors"
 	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/pkg/config"
+	password2 "github.com/jopicornell/go-rest-api/pkg/password"
 	"github.com/jopicornell/go-rest-api/pkg/servertesting"
-	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/guregu/null.v3"
 	"reflect"
 	"testing"
-	"time"
 )
 
 func TestNewAuthService(t *testing.T) {
@@ -64,8 +63,8 @@ func loginReturnJWT(t *testing.T) {
 	authService := NewAuthService(mockedDb, mockedServer)
 	user := "user"
 	password := "password"
-	rows := buildUserRows(true)
-	_ = addUserRows(rows, []byte(password), 1)
+	rows := buildUserRows()
+	_ = addUserRows(rows, password, 1)
 	mock.ExpectQuery(".*").WillReturnRows(rows)
 	if got, err := authService.Login(user, password); err == nil {
 		if got == nil {
@@ -94,8 +93,8 @@ func registerSuccessAndReturnUser(t *testing.T) {
 	insertQuery := "INSERT INTO users \\(name, email, password, active\\) VALUES " +
 		"\\(\\?, \\?, \\?, \\?\\)"
 	mock.ExpectExec(insertQuery).WillReturnResult(sqlmock.NewResult(0, 0))
-	rows := buildUserRows(false)
-	users := addUserRows(rows, nil, 1)
+	rows := buildUserRows()
+	users := addUserRows(rows, "password", 1)
 	queryToRun := "SELECT id, name, email, active, deleted_at " +
 		"FROM users WHERE id = LAST_INSERT_ID()"
 	mock.ExpectQuery(queryToRun).WillReturnRows(rows)
@@ -129,47 +128,38 @@ func mockAuthDB(t *testing.T) (*sqlx.DB, sqlmock.Sqlmock) {
 	return sqlx.NewDb(db, "sqlmock"), mock
 }
 
-func buildUserRows(withPassword bool) *sqlmock.Rows {
-	if withPassword {
-		return sqlmock.NewRows([]string{"id", "name", "password", "email", "active", "deleted_at"})
-	}
-	return sqlmock.NewRows([]string{"id", "name", "email", "active", "deleted_at"})
+func buildUserRows() *sqlmock.Rows {
+	return sqlmock.NewRows([]string{"customer.user_id", "customer.username", "customer.full_name", "customer.password"})
 }
 
-func addUserRows(rows *sqlmock.Rows, password []byte, numRows uint) []models.User {
-	var users []models.User
-	var user *models.User
+func addUserRows(rows *sqlmock.Rows, password string, numRows uint) []model.Customer {
+	var users []model.Customer
+	var user *model.Customer
 	for ; numRows > 0; numRows-- {
 		user = createFakeUser(password)
 		users = append(users, *user)
-		if password == nil {
-			rows.AddRow(user.ID, user.Name, user.Email, user.Active, user.DeletedAt)
-		} else {
-			rows.AddRow(user.ID, user.Name, user.Password, user.Email, user.Active, user.DeletedAt)
-		}
+		rows.AddRow(user.UserID, user.Username, user.FullName, user.Password)
 	}
 	return users
 }
 
-func createFakeUser(password []byte) (user *models.User) {
-	user = &models.User{
-		ID:     uint(faker.UnixTime()),
-		Email:  faker.Email(),
-		Name:   faker.Name(),
-		Active: true,
-		DeletedAt: null.Time{
-			Time:  time.Now().Round(time.Nanosecond),
-			Valid: true,
-		},
-	}
-	if password != nil {
-		user.Password = generatePasswordBcrypt(password)
+func createFakeUser(password string) (user *model.Customer) {
+	user = &model.Customer{
+		UserID:   int32(faker.UnixTime()),
+		FullName: faker.Name(),
+		Password: generatePasswordArgon(password),
 	}
 	return user
 }
 
-func generatePasswordBcrypt(password []byte) []byte {
-	if password, err := bcrypt.GenerateFromPassword(password, 10); err == nil {
+func generatePasswordArgon(passwd string) string {
+	if password, err := password2.ArgonHashFromPassword(passwd, &password2.ArgonPasswordParams{
+		Memory:      64 * 1024,
+		Iterations:  3,
+		Parallelism: 2,
+		SaltLength:  16,
+		KeyLength:   32,
+	}); err == nil {
 		return password
 	} else {
 		panic(err)

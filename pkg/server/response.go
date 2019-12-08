@@ -15,6 +15,8 @@ type Response interface {
 	RespondJSON(statusCode int, ifc interface{})
 	RespondValidationErrors(statusCode int, errors validator.ValidationErrors)
 	Respond(statusCode int)
+	RespondText(statusCode int, content string)
+	SetHeader(key string, value string)
 	Error(error *Error)
 }
 
@@ -28,11 +30,25 @@ func (r *response) GetWriter() http.ResponseWriter {
 	return r.responseWriter
 }
 
+// get the writer so you can handle responses in any other way
+func (r *response) SetHeader(key string, value string) {
+	r.GetWriter().Header().Set(key, value)
+}
+
 //responds with the parsed interface to JSON
 func (r *response) RespondJSON(statusCode int, ifc interface{}) {
 	r.responseWriter.Header().Add("Content-Type", "application/json")
 	r.responseWriter.WriteHeader(statusCode)
 	if err := json.NewEncoder(r.responseWriter).Encode(ifc); err != nil {
+		panic(err)
+	}
+}
+
+//responds with the text
+func (r *response) RespondText(statusCode int, content string) {
+	r.responseWriter.Header().Add("Content-Type", "text/plain")
+	r.responseWriter.WriteHeader(statusCode)
+	if _, err := r.responseWriter.Write([]byte(content)); err != nil {
 		panic(err)
 	}
 }

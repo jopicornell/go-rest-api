@@ -1,1 +1,1 @@
-DROP TABLE image_gallery.galleries;
+DROP TABLE image_gallery.gallery;

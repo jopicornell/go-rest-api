@@ -6,6 +6,7 @@ import (
 	"fmt"
 	. "github.com/go-jet/jet/postgres"
 	"github.com/go-jet/jet/qrm"
+	"github.com/jackc/pgx"
 	"github.com/jmoiron/sqlx"
 	"github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/model"
 	. "github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/table"
@@ -81,6 +82,7 @@ func (s *usersService) Register(user *model.Customer) (_ *model.Customer, err er
 		statement = CustomerHasRoles.INSERT(CustomerHasRoles.AllColumns).MODEL(model.CustomerHasRoles{UserID: user.UserID, Role: models.USER_ROLE})
 		logrus.Info(statement.DebugSql())
 		if _, err := statement.Exec(tx); err != nil {
+
 			logrus.Error(err)
 			err = tx.Rollback()
 			logrus.Panicf("error creating roles for a user: %w", err)
@@ -91,6 +93,10 @@ func (s *usersService) Register(user *model.Customer) (_ *model.Customer, err er
 			return nil, err
 		}
 	} else {
+		errType, ok := err.(pgx.PgError)
+		if ok && errType.ConstraintName == "customer_username_key" && errType.Code == "23505" {
+			return nil, errors.UsernameExists
+		}
 		return nil, err
 	}
 }

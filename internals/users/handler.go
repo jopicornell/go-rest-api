@@ -56,7 +56,11 @@ func (a *UserHandler) Register(response server.Response, context server.Context)
 	if user, err := a.authService.Register(registerRequest.TransformToUser()); err == nil {
 		response.RespondJSON(http.StatusOK, user)
 	} else {
-		logrus.Error(err)
-		response.Respond(http.StatusBadRequest)
+		if err == errors.UsernameExists {
+			response.Respond(409)
+		} else {
+			logrus.Error(err)
+			response.Respond(http.StatusInternalServerError)
+		}
 	}
 }

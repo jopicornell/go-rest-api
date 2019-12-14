@@ -12,9 +12,9 @@ type RegisterRequest struct {
 	Password string `json:"password" valid:"required,gte=6,lte=72"`
 }
 
-func (r *RegisterRequest) TransformToUser() (user *model.Customer) {
+func (r *RegisterRequest) TransformToUser() (user *model.User) {
 
-	user = &model.Customer{
+	user = &model.User{
 		FullName: r.FullName,
 		Password: generatePassword(r.Password),
 		Username: r.Username,

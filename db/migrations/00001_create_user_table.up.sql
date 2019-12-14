@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS image_gallery.customer (
+CREATE TABLE IF NOT EXISTS image_gallery.user (
                                      user_id SERIAL PRIMARY KEY,
                                      username VARCHAR(255) NOT NULL UNIQUE,
                                      full_name VARCHAR(255) NOT NULL,

@@ -24,14 +24,15 @@ func (a *PictureHandler) ConfigureRoutes(router server.Router) {
 	picturesGroup := router.AddGroup("/pictures")
 	picturesGroup.AddRoute("", a.GetPicturesHandler).Methods(http.MethodGet)
 	picturesGroup.AddRoute("/{id:[0-9]+}", a.GetOnePictureHandler).Methods(http.MethodGet)
+	picturesGroup.AddRoute("/{id:[0-9]+}/comments", a.GetPictureComments).Methods(http.MethodGet)
+	picturesGroup.AddRoute("/{id:[0-9]+}/comments", a.CreatePictureComment).Methods(http.MethodPost)
+	picturesGroup.AddRoute("/{id:[0-9]+}/likes", a.GetPictureLikes).Methods(http.MethodGet)
+	picturesGroup.AddRoute("/{id:[0-9]+}/likes/{user_id:[0-9]+}", a.CreatePictureLike).Methods(http.MethodPost)
 	picturesRestrictedUser := picturesGroup.AddGroup("").Use(&middlewares.UserMiddleware{})
 	picturesRestrictedUser.AddRoute("", a.CreatePictureHandler).Methods(http.MethodPost)
 	picturesRestrictedAdmin := picturesGroup.AddGroup("").Use(&middlewares.UserMiddleware{})
 	picturesRestrictedAdmin.AddRoute("/{id:[0-9]+}", a.DeletePictureHandler).Methods(http.MethodDelete)
 	picturesRestrictedAdmin.AddRoute("/{id:[0-9]+}", a.UpdatePictureHandler).Methods(http.MethodPut)
-
-	picturesGroup.AddRoute("/{id:[0-9]+}/comments", a.GetPictureComments).Methods(http.MethodGet)
-	picturesGroup.AddRoute("/{id:[0-9]+}/comments", a.CreatePictureComment).Methods(http.MethodPost)
 
 }
 
@@ -74,7 +75,7 @@ func (a *PictureHandler) UpdatePictureHandler(response server.Response, request 
 
 func (a *PictureHandler) CreatePictureHandler(response server.Response, request server.Context) {
 	var createPictureRequest *requests.CreatePicture
-	user := request.GetUser().(*model.Customer)
+	user := request.GetUser().(*model.User)
 	request.GetBodyMarshalled(&createPictureRequest)
 	if picture, err := a.pictureService.CreatePicture(createPictureRequest.TransformToPicture(), user); err == nil {
 		response.RespondJSON(http.StatusCreated, picture)
@@ -112,6 +113,30 @@ func (a *PictureHandler) CreatePictureComment(response server.Response, request 
 	request.GetBodyMarshalled(&createPictureComment)
 	if comment, err := a.pictureService.CreatePictureComment(int32(id), createPictureComment.TransformToComment()); err == nil {
 		response.SetHeader("Location", fmt.Sprintf("/pictures/%d/comments/%d", id, comment.CommentID))
+		response.RespondJSON(http.StatusCreated, comment)
+	} else {
+		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+	}
+}
+
+func (a *PictureHandler) GetPictureLikes(response server.Response, request server.Context) {
+	id := request.GetParamUInt("id")
+	if picture, err := a.pictureService.GetPictureLikes(id); err == nil {
+		if picture == nil {
+			response.Respond(http.StatusNotFound)
+			return
+		}
+		response.RespondJSON(http.StatusOK, picture)
+	} else {
+		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+	}
+}
+
+func (a *PictureHandler) CreatePictureLike(response server.Response, request server.Context) {
+	id := request.GetParamInt("id")
+	userId := request.GetParamInt("user_id")
+	if comment, err := a.pictureService.CreatePictureLike(int32(id), int32(userId)); err == nil {
+		response.SetHeader("Location", fmt.Sprintf("/pictures/%d/likes/%d", id, comment.UserID))
 		response.RespondJSON(http.StatusCreated, comment)
 	} else {
 		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})

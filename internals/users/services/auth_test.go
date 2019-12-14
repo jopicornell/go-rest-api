@@ -132,9 +132,9 @@ func buildUserRows() *sqlmock.Rows {
 	return sqlmock.NewRows([]string{"customer.user_id", "customer.username", "customer.full_name", "customer.password"})
 }
 
-func addUserRows(rows *sqlmock.Rows, password string, numRows uint) []model.Customer {
-	var users []model.Customer
-	var user *model.Customer
+func addUserRows(rows *sqlmock.Rows, password string, numRows uint) []model.User {
+	var users []model.User
+	var user *model.User
 	for ; numRows > 0; numRows-- {
 		user = createFakeUser(password)
 		users = append(users, *user)
@@ -143,8 +143,8 @@ func addUserRows(rows *sqlmock.Rows, password string, numRows uint) []model.Cust
 	return users
 }
 
-func createFakeUser(password string) (user *model.Customer) {
-	user = &model.Customer{
+func createFakeUser(password string) (user *model.User) {
+	user = &model.User{
 		UserID:   int32(faker.UnixTime()),
 		FullName: faker.Name(),
 		Password: generatePasswordArgon(password),

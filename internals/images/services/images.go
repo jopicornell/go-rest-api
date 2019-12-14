@@ -14,14 +14,14 @@ func NewImagesService(server server.Server) *imagesService {
 }
 
 type ImageService interface {
-	SavePicture(user *model.Customer, imageBytes []byte) *model.Image
+	SavePicture(user *model.User, imageBytes []byte) *model.Image
 }
 
 type imagesService struct {
 	server server.Server
 }
 
-func (is *imagesService) SavePicture(user *model.Customer, imageBytes []byte) *model.Image {
+func (is *imagesService) SavePicture(user *model.User, imageBytes []byte) *model.Image {
 	imagesPath, err := filepath.Abs("./images")
 	if err != nil {
 		logrus.Panicf("error getting the images folder: %s", err)

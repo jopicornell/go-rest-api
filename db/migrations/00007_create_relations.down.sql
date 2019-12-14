@@ -2,7 +2,7 @@ ALTER TABLE image_gallery.picture
     DROP CONSTRAINT pictures_users_fk,
     DROP CONSTRAINT images_pictures_fk;
 
-ALTER TABLE image_gallery.customer
+ALTER TABLE image_gallery.user
     DROP CONSTRAINT images_users_fk;
 
 ALTER TABLE image_gallery.like

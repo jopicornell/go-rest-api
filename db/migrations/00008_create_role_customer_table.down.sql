@@ -1,1 +1,1 @@
-DROP TABLE image_gallery.customer_has_roles;
+DROP TABLE image_gallery.user_has_roles;

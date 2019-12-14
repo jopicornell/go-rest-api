@@ -15,10 +15,12 @@ type PicturesService interface {
 	GetPictures() ([]responses.PictureWithImages, error)
 	GetPicture(uint) (*responses.PictureWithImages, error)
 	GetPictureComments(uint) ([]responses.Comment, error)
+	GetPictureLikes(uint) ([]responses.Like, error)
 	UpdatePicture(uint, *model.Picture) (*model.Picture, error)
-	CreatePicture(*model.Picture, *model.Customer) (*model.Picture, error)
+	CreatePicture(*model.Picture, *model.User) (*model.Picture, error)
 	DeletePicture(uint) error
 	CreatePictureComment(int32, *model.Comment) (*model.Comment, error)
+	CreatePictureLike(pictureId int32, userID int32) (*model.Like, error)
 }
 
 type pictureService struct {
@@ -78,7 +80,7 @@ func (s *pictureService) GetPictureComments(id uint) ([]responses.Comment, error
 	return comments, nil
 }
 
-func (s *pictureService) CreatePicture(picture *model.Picture, user *model.Customer) (*model.Picture, error) {
+func (s *pictureService) CreatePicture(picture *model.Picture, user *model.User) (*model.Picture, error) {
 	statement := Picture.INSERT(Picture.ImageID, Picture.UserID, Picture.Title, Picture.Description).
 		VALUES(picture.ImageID, picture.UserID, picture.Title, picture.Description).
 		RETURNING(Picture.AllColumns)
@@ -147,4 +149,57 @@ func (s *pictureService) CreatePictureComment(id int32, comment *model.Comment) 
 		return nil, err
 	}
 	return comment, nil
+}
+
+func (s *pictureService) GetPictureLikes(id uint) ([]responses.Like, error) {
+	likes := make([]responses.Like, 0)
+	statement := SELECT(Like.UserID, Like.PictureID).
+		FROM(Like.INNER_JOIN(User, User.UserID.EQ(Like.UserID))).
+		WHERE(Like.PictureID.EQ(Int(int64(id))))
+	sqlQuery := statement.DebugSql()
+	logrus.Info(sqlQuery)
+	if err := statement.Query(s.db, &likes); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return likes, nil
+}
+
+func (s *pictureService) CreatePictureLike(id int32, userId int32) (*model.Like, error) {
+	returnLike := new(model.Like)
+	statement := Like.INSERT(Like.PictureID, Like.UserID).
+		VALUES(id, userId).
+		RETURNING(Like.AllColumns)
+	logrus.Info(statement.DebugSql())
+	tx := s.db.MustBegin()
+	if err := statement.Query(tx, returnLike); err != nil {
+		if errRollBack := tx.Rollback(); errRollBack != nil {
+			logrus.Errorf("Error rolling back", errRollBack)
+		}
+		return nil, err
+	}
+	selectPicture := SELECT(Picture.NumLikes).
+		FROM(Picture).
+		WHERE(Picture.PictureID.EQ(Int(int64(id)))).
+		FOR(UPDATE())
+	picture := new(model.Picture)
+	if err := selectPicture.Query(tx, picture); err != nil {
+		if errRollBack := tx.Rollback(); errRollBack != nil {
+			logrus.Errorf("Error rolling back", errRollBack)
+		}
+		return nil, err
+	}
+	picture.NumLikes++
+	updatePicture := Picture.UPDATE(Picture.NumLikes).
+		SET(picture.NumLikes).
+		WHERE(Picture.PictureID.EQ(Int(int64(id))))
+	if _, err := updatePicture.Exec(tx); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return returnLike, nil
 }

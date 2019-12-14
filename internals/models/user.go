@@ -8,15 +8,15 @@ import (
 const USER_ROLE = "user"
 
 type User struct {
-	model.Customer
+	model.User
 }
 
-type CustomerWithRoles struct {
-	model.Customer
-	Roles []model.CustomerHasRoles
+type UserWithRoles struct {
+	model.User
+	Roles []model.UserHasRoles
 }
 
-func (cwr *CustomerWithRoles) GetRoles() []string {
+func (cwr *UserWithRoles) GetRoles() []string {
 	roles := make([]string, 0)
 	for _, role := range cwr.Roles {
 		roles = append(roles, role.Role)
@@ -24,6 +24,6 @@ func (cwr *CustomerWithRoles) GetRoles() []string {
 	return roles
 }
 
-func (cwr *CustomerWithRoles) GetRolesString(separator string) string {
+func (cwr *UserWithRoles) GetRolesString(separator string) string {
 	return strings.Join(cwr.GetRoles(), separator)
 }

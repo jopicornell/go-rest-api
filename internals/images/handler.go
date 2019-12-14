@@ -29,7 +29,7 @@ func (ih *ImageHandler) ConfigureRoutes(router server.Router) {
 }
 
 func (ih *ImageHandler) SaveImage(res server.Response, ctx server.Context) {
-	user := ctx.GetUser().(*model.Customer)
+	user := ctx.GetUser().(*model.User)
 	image := ih.imageService.SavePicture(user, ctx.GetBody())
 	res.SetHeader("Location", fmt.Sprintf("/images/%d", image.ImageID))
 	res.RespondJSON(http.StatusCreated, image)

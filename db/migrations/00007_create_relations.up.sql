@@ -1,16 +1,16 @@
 ALTER TABLE image_gallery.picture
-    ADD CONSTRAINT pictures_users_fk FOREIGN KEY (user_id) REFERENCES image_gallery.customer (user_id),
+    ADD CONSTRAINT pictures_users_fk FOREIGN KEY (user_id) REFERENCES image_gallery.user (user_id),
     ADD CONSTRAINT images_pictures_fk FOREIGN KEY (image_id) REFERENCES image_gallery.image (image_id);
 
-ALTER TABLE image_gallery.customer
+ALTER TABLE image_gallery.user
     ADD CONSTRAINT images_users_fk FOREIGN KEY (avatar_id) REFERENCES image_gallery.image (image_id);
 
 ALTER TABLE image_gallery.like
-    ADD CONSTRAINT likes_users_fk FOREIGN KEY (user_id) REFERENCES image_gallery.customer (user_id),
+    ADD CONSTRAINT likes_users_fk FOREIGN KEY (user_id) REFERENCES image_gallery.user (user_id),
     ADD CONSTRAINT likes_pictures_fk FOREIGN KEY (picture_id) REFERENCES image_gallery.picture (picture_id);
 
 ALTER TABLE image_gallery.comment
-    ADD CONSTRAINT comments_users_fk FOREIGN KEY (user_id) REFERENCES image_gallery.customer (user_id),
+    ADD CONSTRAINT comments_users_fk FOREIGN KEY (user_id) REFERENCES image_gallery.user (user_id),
     ADD CONSTRAINT comments_pictures_fk FOREIGN KEY (picture_id) REFERENCES image_gallery.picture (picture_id);
 
 CREATE TABLE image_gallery.gallery_has_picture (

@@ -20,7 +20,7 @@ import (
 
 type UsersService interface {
 	Login(username string, password string) (*models.Token, error)
-	Register(user *model.Customer) (*model.Customer, error)
+	Register(user *model.User) (*model.User, error)
 }
 
 type usersService struct {
@@ -36,11 +36,11 @@ func NewAuthService(db *sqlx.DB, server server.Server) UsersService {
 }
 
 func (s *usersService) Login(username string, passwd string) (token *models.Token, err error) {
-	statement := SELECT(Customer.AllColumns, CustomerHasRoles.AllColumns).FROM(
-		Customer.INNER_JOIN(CustomerHasRoles, CustomerHasRoles.UserID.EQ(Customer.UserID)),
+	statement := SELECT(User.AllColumns, UserHasRoles.AllColumns).FROM(
+		User.INNER_JOIN(UserHasRoles, UserHasRoles.UserID.EQ(User.UserID)),
 	).
-		WHERE(Customer.Username.EQ(String(username)))
-	var user models.CustomerWithRoles
+		WHERE(User.Username.EQ(String(username)))
+	var user models.UserWithRoles
 	logrus.Info(statement.DebugSql())
 	if err := statement.Query(s.db, &user); err == nil {
 		if err := password.ComparePasswordAndHash(passwd, user.Password); err != nil {
@@ -65,21 +65,21 @@ func (s *usersService) Login(username string, passwd string) (token *models.Toke
 	}
 }
 
-func (s *usersService) Register(user *model.Customer) (_ *model.Customer, err error) {
+func (s *usersService) Register(user *model.User) (_ *model.User, err error) {
 	tx := s.db.MustBegin()
-	statement := Customer.INSERT(
-		Customer.FullName,
-		Customer.Username,
-		Customer.Password,
-		Customer.NumComments,
-		Customer.NumLikes,
-		Customer.NumPictures,
+	statement := User.INSERT(
+		User.FullName,
+		User.Username,
+		User.Password,
+		User.NumComments,
+		User.NumLikes,
+		User.NumPictures,
 	).
 		MODEL(user).
-		RETURNING(Customer.AllColumns)
+		RETURNING(User.AllColumns)
 	logrus.Info(statement.DebugSql())
 	if err := statement.Query(tx, user); err == nil {
-		statement = CustomerHasRoles.INSERT(CustomerHasRoles.AllColumns).MODEL(model.CustomerHasRoles{UserID: user.UserID, Role: models.USER_ROLE})
+		statement = UserHasRoles.INSERT(UserHasRoles.AllColumns).MODEL(model.UserHasRoles{UserID: user.UserID, Role: models.USER_ROLE})
 		logrus.Info(statement.DebugSql())
 		if _, err := statement.Exec(tx); err != nil {
 

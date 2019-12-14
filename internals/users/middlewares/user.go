@@ -20,7 +20,7 @@ func (u *UserMiddleware) Handle(res server.Response, req server.Context, next se
 		return
 	}
 	authToken := authSplit[1]
-	user := new(model.Customer)
+	user := new(model.User)
 	req.GetServer().GetCache().GetStruct(authToken, user)
 	req.SetUser(user)
 	next(res, req)

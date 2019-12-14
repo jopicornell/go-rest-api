@@ -1,6 +1,6 @@
 package responses
 
 type Like struct {
-	PictureID string `json:"picture_id"`
-	UserID    string `json:"user_id"`
+	PictureID int32 `json:"picture_id"`
+	UserID    int32 `json:"user_id"`
 }

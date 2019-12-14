@@ -8,7 +8,13 @@
 
 package model
 
-type GalleryHasPicture struct {
-	GalleryID int32
-	PictureID int32
+type User struct {
+	UserID      int32 `sql:"primary_key"`
+	Username    string
+	FullName    string
+	Password    string
+	NumPictures int32
+	NumComments int32
+	NumLikes    int32
+	AvatarID    *int32
 }

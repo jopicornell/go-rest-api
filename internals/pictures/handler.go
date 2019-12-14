@@ -3,6 +3,8 @@ package pictures
 import (
 	"fmt"
 	"github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/model"
+	"github.com/jopicornell/go-rest-api/internals/errors"
+	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/internals/pictures/requests"
 	"github.com/jopicornell/go-rest-api/internals/pictures/services"
 	"github.com/jopicornell/go-rest-api/internals/users/middlewares"
@@ -25,14 +27,22 @@ func (a *PictureHandler) ConfigureRoutes(router server.Router) {
 	picturesGroup.AddRoute("", a.GetPicturesHandler).Methods(http.MethodGet)
 	picturesGroup.AddRoute("/{id:[0-9]+}", a.GetOnePictureHandler).Methods(http.MethodGet)
 	picturesGroup.AddRoute("/{id:[0-9]+}/comments", a.GetPictureComments).Methods(http.MethodGet)
-	picturesGroup.AddRoute("/{id:[0-9]+}/comments", a.CreatePictureComment).Methods(http.MethodPost)
 	picturesGroup.AddRoute("/{id:[0-9]+}/likes", a.GetPictureLikes).Methods(http.MethodGet)
-	picturesGroup.AddRoute("/{id:[0-9]+}/likes/{user_id:[0-9]+}", a.CreatePictureLike).Methods(http.MethodPost)
-	picturesRestrictedUser := picturesGroup.AddGroup("").Use(&middlewares.UserMiddleware{})
+
+	picturesRestrictedUserAdmin := picturesGroup.AddGroup("").
+		Use(&middlewares.UserMiddleware{Roles: []string{models.USER_ROLE, models.ADMIN_ROLE}})
+	picturesRestrictedUserAdmin.
+		AddRoute("/{id:[0-9]+}", a.DeletePicture).
+		Methods(http.MethodDelete)
+	picturesRestrictedUserAdmin.
+		AddRoute("/{id:[0-9]+}/likes/{user_id:[0-9]+}", a.DeletePictureLike).
+		Methods(http.MethodDelete)
+
+	picturesRestrictedUser := picturesGroup.AddGroup("").
+		Use(&middlewares.UserMiddleware{Roles: []string{models.USER_ROLE}})
 	picturesRestrictedUser.AddRoute("", a.CreatePictureHandler).Methods(http.MethodPost)
-	picturesRestrictedAdmin := picturesGroup.AddGroup("").Use(&middlewares.UserMiddleware{})
-	picturesRestrictedAdmin.AddRoute("/{id:[0-9]+}", a.DeletePictureHandler).Methods(http.MethodDelete)
-	picturesRestrictedAdmin.AddRoute("/{id:[0-9]+}", a.UpdatePictureHandler).Methods(http.MethodPut)
+	picturesRestrictedUser.AddRoute("/{id:[0-9]+}/comments", a.CreatePictureComment).Methods(http.MethodPost)
+	picturesRestrictedUser.AddRoute("/{id:[0-9]+}/likes/{user_id:[0-9]+}", a.CreatePictureLike).Methods(http.MethodPost)
 
 }
 
@@ -75,9 +85,10 @@ func (a *PictureHandler) UpdatePictureHandler(response server.Response, request 
 
 func (a *PictureHandler) CreatePictureHandler(response server.Response, request server.Context) {
 	var createPictureRequest *requests.CreatePicture
-	user := request.GetUser().(*model.User)
+	user := request.GetUser().(*models.UserWithRoles)
 	request.GetBodyMarshalled(&createPictureRequest)
 	if picture, err := a.pictureService.CreatePicture(createPictureRequest.TransformToPicture(), user); err == nil {
+		response.SetHeader("Location", fmt.Sprintf("/pictures/%d", picture.PictureID))
 		response.RespondJSON(http.StatusCreated, picture)
 	} else {
 		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
@@ -85,12 +96,20 @@ func (a *PictureHandler) CreatePictureHandler(response server.Response, request 
 
 }
 
-func (a *PictureHandler) DeletePictureHandler(response server.Response, request server.Context) {
+func (a *PictureHandler) DeletePicture(response server.Response, request server.Context) {
 	id := request.GetParamUInt("id")
-	if err := a.pictureService.DeletePicture(uint(id)); err == nil {
+	user := request.GetUser().(*models.UserWithRoles)
+	if err := a.pictureService.DeletePicture(id, user); err == nil {
 		response.Respond(http.StatusNoContent)
 	} else {
-		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+		switch err {
+		case errors.ForbiddenAction:
+			response.Respond(http.StatusForbidden)
+		case errors.PictureNotFound:
+			response.Respond(http.StatusNotFound)
+		default:
+			response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+		}
 	}
 }
 
@@ -139,6 +158,26 @@ func (a *PictureHandler) CreatePictureLike(response server.Response, request ser
 		response.SetHeader("Location", fmt.Sprintf("/pictures/%d/likes/%d", id, comment.UserID))
 		response.RespondJSON(http.StatusCreated, comment)
 	} else {
-		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+		switch err {
+		case errors.UserAlreadyLikedPicture:
+			response.Respond(http.StatusConflict)
+		default:
+			response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+		}
+	}
+}
+
+func (a *PictureHandler) DeletePictureLike(response server.Response, request server.Context) {
+	id := request.GetParamInt("id")
+	userId := request.GetParamInt("user_id")
+	if err := a.pictureService.DeletePictureLike(int32(id), int32(userId)); err == nil {
+		response.Respond(http.StatusNoContent)
+	} else {
+		switch err {
+		case errors.PictureNotFound:
+			response.Respond(http.StatusNotFound)
+		default:
+			response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+		}
 	}
 }

@@ -12,6 +12,7 @@ import (
 	. "github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/table"
 	"github.com/jopicornell/go-rest-api/internals/errors"
 	"github.com/jopicornell/go-rest-api/internals/models"
+	"github.com/jopicornell/go-rest-api/internals/users/responses"
 	"github.com/jopicornell/go-rest-api/pkg/password"
 	"github.com/jopicornell/go-rest-api/pkg/server"
 	"github.com/sirupsen/logrus"
@@ -20,7 +21,7 @@ import (
 
 type UsersService interface {
 	Login(username string, password string) (*models.Token, error)
-	Register(user *model.User) (*model.User, error)
+	Register(user *model.User) (*responses.User, error)
 }
 
 type usersService struct {
@@ -40,9 +41,9 @@ func (s *usersService) Login(username string, passwd string) (token *models.Toke
 		User.INNER_JOIN(UserHasRoles, UserHasRoles.UserID.EQ(User.UserID)),
 	).
 		WHERE(User.Username.EQ(String(username)))
-	var user models.UserWithRoles
+	user := new(models.UserWithRoles)
 	logrus.Info(statement.DebugSql())
-	if err := statement.Query(s.db, &user); err == nil {
+	if err := statement.Query(s.db, user); err == nil {
 		if err := password.ComparePasswordAndHash(passwd, user.Password); err != nil {
 			return nil, errors.AuthUserNotMatched
 		}
@@ -65,7 +66,7 @@ func (s *usersService) Login(username string, passwd string) (token *models.Toke
 	}
 }
 
-func (s *usersService) Register(user *model.User) (_ *model.User, err error) {
+func (s *usersService) Register(user *model.User) (_ *responses.User, err error) {
 	tx := s.db.MustBegin()
 	statement := User.INSERT(
 		User.FullName,
@@ -76,10 +77,15 @@ func (s *usersService) Register(user *model.User) (_ *model.User, err error) {
 		User.NumPictures,
 	).
 		MODEL(user).
-		RETURNING(User.AllColumns)
+		RETURNING(
+			User.UserID,
+			User.FullName,
+			User.Username,
+		)
 	logrus.Info(statement.DebugSql())
-	if err := statement.Query(tx, user); err == nil {
-		statement = UserHasRoles.INSERT(UserHasRoles.AllColumns).MODEL(model.UserHasRoles{UserID: user.UserID, Role: models.USER_ROLE})
+	responseUser := new(responses.User)
+	if err := statement.Query(tx, responseUser); err == nil {
+		statement = UserHasRoles.INSERT(UserHasRoles.AllColumns).MODEL(model.UserHasRoles{UserID: responseUser.UserID, Role: models.USER_ROLE})
 		logrus.Info(statement.DebugSql())
 		if _, err := statement.Exec(tx); err != nil {
 
@@ -88,13 +94,13 @@ func (s *usersService) Register(user *model.User) (_ *model.User, err error) {
 			logrus.Panicf("error creating roles for a user: %w", err)
 		}
 		if err = tx.Commit(); err == nil {
-			return user, nil
+			return responseUser, nil
 		} else {
 			return nil, err
 		}
 	} else {
 		errType, ok := err.(pgx.PgError)
-		if ok && errType.ConstraintName == "customer_username_key" && errType.Code == "23505" {
+		if ok && errType.ConstraintName == "user_username_key" && errType.Code == "23505" {
 			return nil, errors.UsernameExists
 		}
 		return nil, err

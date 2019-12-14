@@ -1,7 +1,7 @@
 package middlewares
 
 import (
-	"github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/model"
+	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/pkg/server"
 	"net/http"
 	"strings"
@@ -20,8 +20,12 @@ func (u *UserMiddleware) Handle(res server.Response, req server.Context, next se
 		return
 	}
 	authToken := authSplit[1]
-	user := new(model.User)
+	user := new(models.UserWithRoles)
 	req.GetServer().GetCache().GetStruct(authToken, user)
+	if len(u.Roles) > 0 && !user.HasSomeRole(u.Roles) {
+		res.Respond(http.StatusForbidden)
+		return
+	}
 	req.SetUser(user)
 	next(res, req)
 }

@@ -8,7 +8,7 @@
 
 package model
 
-type GalleryHasPicture struct {
-	GalleryID int32
-	PictureID int32
+type UserHasRoles struct {
+	UserID int32
+	Role   string
 }

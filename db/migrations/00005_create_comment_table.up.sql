@@ -5,3 +5,5 @@ CREATE TABLE image_gallery.comment (
     created TIMESTAMP DEFAULT NOW(),
     comment TEXT NOT NULL
 );
+
+CREATE INDEX comment_user_picture_idx ON image_gallery.comment (picture_id);

@@ -54,7 +54,7 @@ func (a *UserHandler) Register(response server.Response, context server.Context)
 		response.RespondJSON(http.StatusBadRequest, err)
 	}
 	if user, err := a.authService.Register(registerRequest.TransformToUser()); err == nil {
-		response.RespondJSON(http.StatusOK, user)
+		response.RespondJSON(http.StatusCreated, user)
 	} else {
 		if err == errors.UsernameExists {
 			response.Respond(409)

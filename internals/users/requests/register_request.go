@@ -7,7 +7,7 @@ import (
 )
 
 type RegisterRequest struct {
-	FullName string `json:"fullname" valid:"matches(^[a-zA-Z\\s]+$)"`
+	FullName string `json:"full_name" valid:"matches(^[a-zA-Z\\s]+$)"`
 	Username string `json:"username" valid:"alphanum,required"`
 	Password string `json:"password" valid:"required,gte=6,lte=72"`
 }

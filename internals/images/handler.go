@@ -2,8 +2,8 @@ package images
 
 import (
 	"fmt"
-	"github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/model"
 	"github.com/jopicornell/go-rest-api/internals/images/services"
+	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/internals/users/middlewares"
 	"github.com/jopicornell/go-rest-api/pkg/server"
 	"net/http"
@@ -29,7 +29,7 @@ func (ih *ImageHandler) ConfigureRoutes(router server.Router) {
 }
 
 func (ih *ImageHandler) SaveImage(res server.Response, ctx server.Context) {
-	user := ctx.GetUser().(*model.User)
+	user := ctx.GetUser().(*models.UserWithRoles)
 	image := ih.imageService.SavePicture(user, ctx.GetBody())
 	res.SetHeader("Location", fmt.Sprintf("/images/%d", image.ImageID))
 	res.RespondJSON(http.StatusCreated, image)

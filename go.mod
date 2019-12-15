@@ -15,6 +15,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.7.0
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/gorilla/mux v1.7.1
+	github.com/gorilla/websocket v1.4.1
 	github.com/graux/image-manager v0.0.0-20191204164210-f8171224d867
 	github.com/jackc/pgx v3.2.0+incompatible
 	github.com/jmoiron/sqlx v1.2.0

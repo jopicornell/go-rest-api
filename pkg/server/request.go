@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/jopicornell/go-rest-api/internals/models"
+	"github.com/jopicornell/go-rest-api/api/users/models"
 	"io/ioutil"
 	"log"
 	"net/http"

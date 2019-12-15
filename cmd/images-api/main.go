@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/jopicornell/go-rest-api/internals"
+	"github.com/jopicornell/go-rest-api/api"
 )
 
 func main() {
-	internals.Start()
+	api.Start()
 }

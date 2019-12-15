@@ -2,8 +2,8 @@ package servertesting
 
 import (
 	"encoding/json"
+	"github.com/jopicornell/go-rest-api/api/users/models"
 	"github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/model"
-	"github.com/jopicornell/go-rest-api/internals/models"
 	"github.com/jopicornell/go-rest-api/pkg/server"
 	"io/ioutil"
 	"net/http"

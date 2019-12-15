@@ -1,7 +1,5 @@
-# v1.0.0
-This app is aimed to be an integral solution for small business managers and their employees, but each module can be
-used by anyonone. It is thought to be modular, fast and simple. The first module that will be included in this first 
-version will be an appointment management.
+# Images API v1.0.0
+This is the 
 
 ## Appointments module
 Basically, it is an appointment manager app. The flow is simple: 
@@ -18,18 +16,17 @@ employees, manage client data, see, set and assign the appointments. From the pe
 able to see all appointments of the day, see all unasigned appointments, assign to him one unassigned appointment and
 mark as finished an appointment.
 
-## Architecture
-The architecture of the project is aimed to be a SoA/Microservices app. Each service is configured to be a separated
-Go http server, allowing us to scale the app as it grows. It will be thought as an stateless server from the beginning,
-allowing us to containerize each module separately.
-
 ## Start the project
 This project uses the new go modules. This means you should have installed the latest version of go. This brings the
 benefit (or drawback, if you are an old go developer 😜) that you could clone this repo in any folder of your system and
 run the `go mod download` and you should be done with dependencies.
 
-You should install and configure mariadb and create a schema so you can run this project without any problem. All tests
-are mocked so running `go test ./...` will run tests and you don't need any db for that tests.
+You should install and configure postgres to be able to run the migrations. After that run 
+`go build -o ./bin ./cmd/migrate` to be able to run the migrations and run `chmod +x ./bin/migrate`. Then to run the
+migrations is as easy as run `./bin/migrate up`.
+
+Once migrations are ran, you can build the main app with `go build -o ./bin ./cmd/images-api`, give exec perms with 
+`chmod +x ./bin/images_api` and run `./bin/images_api`
 
 ## Folder Structure
 Go language doesn't define a folder structure, but there's a non-official structure that I wanted to follow, as it is
@@ -41,27 +38,45 @@ one of that commands that should be present on all projects that have persistent
 related commands like users, appointments and so on.
 
 ### Db
-Here are all db related files like migrations and big SQL files.
+Here are all db related files like migrations. 
 
 #### Migrations
 Find here all the ups and downs of all migrations in sql format.
 
-### Internals
-Those are internals of the app. Here you'll find all source code that is app related and could not be shared among other
-projects/apps. There are a few concepts that I find interesting and are used on all modules:
+#### Entities
+Here you'll find [go-jet](https://github.com/go-jet/jet) generated files like models and tables.
 
-#### Api
-Here I separate in folders the different modules this app has. Usually it matches all the commands (except from the 
-migrate command). Inside the Api folder there are two folders and a few repeated files. 
+To generate this files again with your structure, just run:
+ ```
+ jet -source=PostgreSQL -host=localhost -port=5432 -user={user} -password={pasword} -dbname={db} -schema={schema} -path=./db/entities
+```
 
-First we have the **handlers** 
-and the **services**. **Handlers** are small controllers that are in charge of calling the correct services to do the
-right work. Only "*manage*" the request and make them understandable to services. **Services**, on the other hand, are 
-interfaces where all the business logic happens. *api.go* files are the "*main*" of the api. They prepare the http
-server to be able to handle the requests appropriately. *routes.go* prepare all the routes with its "*ConfigureRoutes*"
-method.
+### Api
+The `api.go` file is the bootstrap of the app. It contains the little logic to start the handlers and the server.
+Here I separate in folders the different modules this app has. You'll find some files like `handler.go` that contain all
+the handler logic and `x_errors.go` that contain common used errors over the module and the app.
+
+#### middlewares
+All the middlewares that are required for this or other modules. For example, the user middleware is used all over the app,
+but it is placed here as it belongs to the user universe
+
+#### Models
+I only use models when is strictly necessary. May seem like **responses** and **requests** are models as well, but they
+are only used to format the input and output of the app. If a struct has to have some logic, then is treated as model.
+In this app, the only model you'll see is the User, placed in the user module.
+
+#### Requests
+I've researched that coupling models to requests in go leads to problems. This is something Laravel does,
+and I really like it. Here you'll find all the requests that are handled by handler, with validations.
+
+#### Responses
+The same as requests, but for the responses. Usually Jet allows you to redefine models and make very complex trees in
+no time. That's where all
+
+#### Services
+A folder containing all the logic of the app. Usually, you'll see no coupling between Handlers and 
 
 ### Pkg
 Here you'll find all package related source codes. This is the folder that could be transformed into libraries to be
 used on other projects. Here you'll find Server wrappers, Router wrappers, utilities... So they are done in a way that 
-I find productive and easy. This allows me to be able to replace external libraries with ease as they are wrapped.
+I find productive and easy. This allows me to be able to replace external libraries with ease because they are wrapped.

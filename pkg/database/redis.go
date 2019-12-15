@@ -42,7 +42,10 @@ func (r *Redis) InitializeClient() {
 func (r *Redis) GetStruct(key string, ifc interface{}) {
 	cmd := r.client.Get(key)
 	if cmd.Err() != nil {
-		panic(cmd.Err())
+		if cmd.Err() != redis.Nil {
+			panic(cmd.Err())
+		}
+		return
 	}
 	if err := json.Unmarshal([]byte(cmd.Val()), ifc); err != nil {
 		panic(err)

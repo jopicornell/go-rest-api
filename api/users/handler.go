@@ -25,6 +25,7 @@ func (a *UserHandler) Initialize(server server.Server) {
 func (a *UserHandler) ConfigureRoutes(router server.Router) {
 	userGroup := router.AddGroup("/users")
 	userGroup.AddRoute("/login", a.Login).Methods(http.MethodPost)
+	userGroup.AddRoute("/{username:[a-zA-Z0-9]+}", a.CheckUsername).Methods(http.MethodHead)
 	userGroup.AddRoute("", a.Register).Methods(http.MethodPost)
 	restrictedUserAdmin := userGroup.AddGroup("").
 		Use(&middlewares.UserMiddleware{Roles: []string{models.USER_ROLE, models.ADMIN_ROLE}})
@@ -88,6 +89,11 @@ func (a *UserHandler) UpdateUser(response server.Response, context server.Contex
 	id := context.GetParamUInt("id")
 	var editUserRequest requests.EditUser
 	context.GetBodyMarshalled(&editUserRequest)
+	err := utilities.ValidateStruct(editUserRequest)
+	if err != nil {
+		response.RespondValidationErrors(http.StatusBadRequest, err)
+		return
+	}
 	if picture, err := a.authService.UpdateUser(id, editUserRequest.TransformToUser()); err == nil {
 		if picture == nil {
 			response.Respond(http.StatusNotFound)
@@ -96,5 +102,20 @@ func (a *UserHandler) UpdateUser(response server.Response, context server.Contex
 		response.RespondJSON(http.StatusOK, picture)
 	} else {
 		response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+	}
+}
+
+func (a *UserHandler) CheckUsername(response server.Response, context server.Context) {
+	username := context.GetParamString("username")
+	if err := a.authService.CheckUsername(username); err == nil {
+		response.Respond(http.StatusOK)
+	} else {
+		switch err {
+		case errors.UserNotFound:
+			response.Respond(http.StatusNotFound)
+		default:
+			response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+		}
+
 	}
 }

@@ -3,8 +3,8 @@ package requests
 import "github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/model"
 
 type EditUser struct {
-	Username string `json:"username" validate:"required"`
-	FullName string `json:"fullname" validate:"required"`
+	Username string `json:"username" validate:"required,alphanum,min=4"`
+	FullName string `json:"fullname" validate:"ascii,min=5,required"`
 	AvatarId *int32 `json:"image_id" validate:"required,numeric"`
 }
 

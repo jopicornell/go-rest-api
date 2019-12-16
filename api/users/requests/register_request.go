@@ -7,9 +7,9 @@ import (
 )
 
 type RegisterRequest struct {
-	FullName string `json:"fullname" valid:"matches(^[a-zA-Z\\s]+$),gte=5"`
-	Username string `json:"username" valid:"alphanum,required"`
-	Password string `json:"password" valid:"required,gte=6,lte=72"`
+	Username string `json:"username" validate:"required,alphanum,min=4"`
+	FullName string `json:"fullname" validate:"ascii,min=5,required"`
+	Password string `json:"password" validate:"required,gte=6,lte=72"`
 }
 
 func (r *RegisterRequest) TransformToUser() (user *model.User) {

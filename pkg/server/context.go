@@ -25,6 +25,7 @@ type Context interface {
 	GetPathParameters() map[string]string
 	GetParamUInt(param string) uint
 	GetParamInt(param string) int
+	GetParamString(param string) string
 	GetRequest() *http.Request
 	GetUser() interface{}
 	SetUser(user interface{})
@@ -97,6 +98,10 @@ func (r *innerContext) GetParamUInt(param string) uint {
 	} else {
 		panic(err)
 	}
+}
+
+func (r *innerContext) GetParamString(param string) string {
+	return r.PathParameters[param]
 }
 
 func (r *innerContext) GetParamInt(param string) int {

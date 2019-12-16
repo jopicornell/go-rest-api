@@ -2,7 +2,6 @@ package services
 
 import (
 	"crypto/sha512"
-	"database/sql"
 	"encoding/base64"
 	"fmt"
 	. "github.com/go-jet/jet/postgres"
@@ -25,6 +24,7 @@ type UsersService interface {
 	Register(user *model.User) (*responses.User, error)
 	GetUser(id uint) (*responses.User, error)
 	UpdateUser(id uint, user *model.User) (*responses.User, error)
+	CheckUsername(username string) error
 }
 
 type usersService struct {
@@ -125,7 +125,7 @@ func (s *usersService) GetUser(id uint) (*responses.User, error) {
 		WHERE(User.UserID.EQ(Int(int64(id))))
 	logrus.Info(statement.DebugSql())
 	if err := statement.Query(s.db, user); err != nil {
-		if err == sql.ErrNoRows {
+		if err == qrm.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
@@ -148,4 +148,19 @@ func (s *usersService) UpdateUser(id uint, user *model.User) (*responses.User, e
 		return nil, errors.UserNotFound
 	}
 	return s.GetUser(id)
+}
+
+func (s *usersService) CheckUsername(username string) error {
+	user := new(responses.User)
+	statement := SELECT(
+		User.UserID,
+	).FROM(User).
+		WHERE(User.Username.EQ(String(username)))
+	logrus.Info(statement.DebugSql())
+	if err := statement.Query(s.db, user); err != nil {
+		if err == qrm.ErrNoRows {
+			return errors.UserNotFound
+		}
+	}
+	return nil
 }

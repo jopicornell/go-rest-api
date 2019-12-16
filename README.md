@@ -2,7 +2,7 @@
 
 ## Start the project
 This project uses the new go modules. This means you should have installed the latest version of go. This brings the
-benefit (or drawback, if you are an old go developer 😜) that you could clone this repo in any folder of your system and
+benefit that you could clone this repo in any folder of your system and
 run the `go mod download` and you should be done with dependencies.
 
 You should install and configure postgres to be able to run the migrations. After that run 
@@ -11,8 +11,9 @@ You should install and configure postgres to be able to run the migrations. Afte
 It is recommended to create a `palmaactiva` role and db, because go-jet is already configured to attack this dbs. If you want
 to configure another db you can, but you will need to reexecute go-jet, which is explained under the DB section of this readme.
 
-Then to run the migrations is as easy as run `./bin/migrate up`. Once migrations are ran, you can build the main app with 
-`go build -o ./bin ./cmd/images-api`, give exec perms with `chmod +x ./bin/images_api` and run `./bin/images_api`.
+Then to run the migrations is as easy as run `./bin/migrate up`. Once migrations are ran, copy the .env.example to .env, modify it and
+you can build the main app with `go build -o ./bin ./cmd/images-api`, give exec perms with `chmod +x ./bin/images_api` and 
+run `./bin/images_api`.
 
 ## Folder Structure
 Go language doesn't define a folder structure, but there's a non-official structure that I wanted to follow, as it is

@@ -28,9 +28,10 @@ func (ih *ImageHandler) ConfigureRoutes(router server.Router) {
 	imagesGroup.AddRoute("", ih.SaveImage).Methods(http.MethodPost)
 }
 
-func (ih *ImageHandler) SaveImage(res server.Response, ctx server.Context) {
-	user := ctx.GetUser().(*models.UserWithRoles)
-	image := ih.imageService.SavePicture(user, ctx.GetBody())
+func (ih *ImageHandler) SaveImage(res server.Response, context server.Context) {
+	imageType := context.GetRequest().URL.Query().Get("type")
+	user := context.GetUser().(*models.UserWithRoles)
+	image := ih.imageService.SavePicture(user, context.GetBody(), imageType)
 	res.SetHeader("Location", fmt.Sprintf("/images/%d", image.ImageID))
 	res.RespondJSON(http.StatusCreated, image)
 }

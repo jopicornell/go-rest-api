@@ -2,15 +2,14 @@ package requests
 
 import "github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/model"
 
-type CreatePicture struct {
+type CreateOrUpdatePicture struct {
 	Description string `json:"description"`
-	Image       string `json:"image"`
-	ImageID     int    `json:"image_id"`
-	Title       string `json:"title"`
-	UserID      int    `json:"user_id"`
+	ImageID     int    `json:"image_id" validate:"numeric"`
+	Title       string `json:"title" validate:"min=3"`
+	UserID      int    `json:"user_id" validate:"numeric"`
 }
 
-func (cpr *CreatePicture) TransformToPicture() *model.Picture {
+func (cpr *CreateOrUpdatePicture) TransformToPicture() *model.Picture {
 	return &model.Picture{
 		UserID:      int32(cpr.UserID),
 		ImageID:     int32(cpr.ImageID),

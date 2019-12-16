@@ -1,0 +1,843 @@
+{
+	"info": {
+		"_postman_id": "bf78869f-46e8-409b-b3e8-c7ee98bc22ab",
+		"name": "ImagesApi",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "ce660058-6e0e-47d6-b333-5ebef6214496",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has correct structure\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.token).to.be.a('string');",
+									"    pm.expect(jsonData.user_id).to.be.a('number');",
+									"    pm.expect(jsonData.roles).to.be.a('array');",
+									"});",
+									"",
+									"pm.test(\"Save access token for later usage in Authorization token\", function () {",
+									"    pm.environment.set(\"access_token\", pm.response.json().token);",
+									"    pm.environment.set(\"user_id\", pm.response.json().user_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"username\": \"test\",\n\t\"password\": \"ThisIsMyPassword\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_url}}/users/login",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"users",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "6bd2ca5f-5e97-4fca-9e81-1080d2646d9f",
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response has correct structure\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.fullname).to.be.a('string');",
+									"    pm.expect(jsonData.username).to.be.a('string');",
+									"    pm.expect(jsonData.user_id).to.be.a('number');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"fullname\": \"My Name\",\n\t\"password\": \"ThisIsMyPassword\",\n\t\"username\": \"test\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_url}}/users",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "eecb54f1-b502-4d2b-9d4e-3b2f5c5f11c8",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has correct structure\", function () {",
+									"    var user = pm.response.json();",
+									"    pm.expect(user.user_id).to.be.a('number');",
+									"    pm.expect(user.username).to.be.a('string');",
+									"    pm.expect(user.fullname).to.be.a('string');",
+									"    pm.expect(user.avatar).to.be.an('object');",
+									"    pm.expect(user.avatar.image_id).to.be.a('number');",
+									"    pm.expect(user.avatar.user_id).to.be.a('number');",
+									"    pm.expect(user.avatar.thumb_url).to.be.a('string');",
+									"    pm.expect(user.avatar.lowres_url).to.be.a('string');",
+									"    pm.expect(user.avatar.highres_url).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_url}}/users/{{user_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "927f1a27-7013-41e0-9108-dc75dba4ebee",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has correct structure\", function () {",
+									"    var user = pm.response.json();",
+									"    pm.expect(user.user_id).to.be.a('number');",
+									"    pm.expect(user.username).to.be.a('string');",
+									"    pm.expect(user.fullname).to.be.a('string');",
+									"    pm.expect(user.avatar).to.be.an('object');",
+									"    pm.expect(user.avatar.image_id).to.be.a('number');",
+									"    pm.expect(user.avatar.user_id).to.be.a('number');",
+									"    pm.expect(user.avatar.thumb_url).to.be.a('string');",
+									"    pm.expect(user.avatar.lowres_url).to.be.a('string');",
+									"    pm.expect(user.avatar.highres_url).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"test\",\n    \"fullname\": \"My Name\",\n    \"avatar\": {\n        \"image_id\": {{last_image_id}}\n    },\n    \"image_id\": {{last_image_id}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_url}}/users/{{user_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Check username",
+					"request": {
+						"method": "HEAD",
+						"header": [],
+						"url": {
+							"raw": "{{api_url}}/users/test",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"users",
+								"test"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "Pictures",
+			"item": [
+				{
+					"name": "Pictures",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "bb3b0768-6b70-47d7-b674-41d48bd8c4a1",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has correct structure\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.a('array');",
+									"    jsonData.forEach((picture) => {",
+									"        pm.expect(picture.title).to.be.a('string');",
+									"        pm.expect(picture.description).to.be.a('string');",
+									"        pm.expect(picture.picture_id).to.be.a('number');",
+									"        pm.expect(picture.user_id).to.be.a('number');",
+									"        pm.expect(picture.num_comments).to.be.a('number');",
+									"        pm.expect(picture.num_likes).to.be.a('number');",
+									"        pm.expect(picture.image).to.be.an('object');",
+									"        pm.expect(picture.image.image_id).to.be.a('number');",
+									"        pm.expect(picture.image.user_id).to.be.a('number');",
+									"        pm.expect(picture.image.thumb_url).to.be.a('string');",
+									"        pm.expect(picture.image.lowres_url).to.be.a('string');",
+									"        pm.expect(picture.image.highres_url).to.be.a('string');",
+									"    });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_url}}/pictures",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"pictures"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Picture Detail",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "bb3b0768-6b70-47d7-b674-41d48bd8c4a1",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has correct structure\", function () {",
+									"    var picture = pm.response.json();",
+									"    pm.expect(picture.title).to.be.a('string');",
+									"    pm.expect(picture.description).to.be.a('string');",
+									"    pm.expect(picture.picture_id).to.be.a('number');",
+									"    pm.expect(picture.user_id).to.be.a('number');",
+									"    pm.expect(picture.num_comments).to.be.a('number');",
+									"    pm.expect(picture.num_likes).to.be.a('number');",
+									"    pm.expect(picture.image).to.be.an('object');",
+									"    pm.expect(picture.image.image_id).to.be.a('number');",
+									"    pm.expect(picture.image.user_id).to.be.a('number');",
+									"    pm.expect(picture.image.thumb_url).to.be.a('string');",
+									"    pm.expect(picture.image.lowres_url).to.be.a('string');",
+									"    pm.expect(picture.image.highres_url).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_url}}/pictures/{{last_picture_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"pictures",
+								"{{last_picture_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Picture",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "a6c044a9-4367-42d0-a212-983e5940ab5d",
+								"exec": [
+									"pm.test(\"create last_picture_id env var\", () => {",
+									"    var picture = pm.response.json();",
+									"    pm.environment.set(\"last_picture_id\", picture.picture_id);",
+									"})",
+									"",
+									"pm.test(\"Status code is 201\", () => {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Headers include location\", () => {",
+									"    pm.response.to.have.header(\"Location\");",
+									"});",
+									"",
+									"pm.test(\"Response has correct structure\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.picture_id).to.be.a('number');",
+									"    pm.expect(jsonData.user_id).to.be.a('number');",
+									"    pm.expect(jsonData.title).to.be.a('string');",
+									"    pm.expect(jsonData.description).to.be.a('string');",
+									"    pm.expect(jsonData.num_comments).to.be.a('number');",
+									"    pm.expect(jsonData.num_likes).to.be.a('number');",
+									"  ",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"image_id\": {{last_image_id}},\n    \"title\": \"test\",\n    \"description\": \"test\",\n    \"user_id\": {{user_id}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_url}}/pictures",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"pictures"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit Picture",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "a6c044a9-4367-42d0-a212-983e5940ab5d",
+								"exec": [
+									"pm.test(\"Status code is 201\", () => {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Headers include location\", () => {",
+									"    pm.response.to.have.header(\"Location\");",
+									"});",
+									"",
+									"pm.test(\"Response has correct structure\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.picture_id).to.be.a('number');",
+									"    pm.expect(jsonData.user_id).to.be.a('number');",
+									"    pm.expect(jsonData.title).to.be.a('string');",
+									"    pm.expect(jsonData.description).to.be.a('string');",
+									"    pm.expect(jsonData.num_comments).to.be.a('number');",
+									"    pm.expect(jsonData.num_likes).to.be.a('number');",
+									"  ",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"image_id\": {{last_image_id}},\n    \"title\": \"title\",\n    \"description\": \"test\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_url}}/pictures/{{last_picture_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"pictures",
+								"{{last_picture_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Picture",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "09095ae5-03a1-4ee5-8981-2372943d3831",
+								"exec": [
+									"pm.test(\"Status code is 204\", () => {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{api_url}}/pictures/{{last_picture_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"pictures",
+								"{{last_picture_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Like Picture",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "c9e4f8c0-0244-473d-b7d1-fcb452b9c8fe",
+								"exec": [
+									"pm.test(\"Status code is 201\", () => {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Headers include location\", () => {",
+									"    pm.response.to.have.header(\"Location\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{api_url}}/pictures/{{last_picture_id}}/likes/{{user_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"pictures",
+								"{{last_picture_id}}",
+								"likes",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Dislike Picture",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "377e48be-da4e-42c1-af24-0832d9277bc7",
+								"exec": [
+									"pm.test(\"Status code is 204\", () => {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{api_url}}/pictures/{{last_picture_id}}/likes/{{user_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"pictures",
+								"{{last_picture_id}}",
+								"likes",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Comment Picture",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "31a5dc66-e4e3-416b-a135-a30f7ca0e1ba",
+								"exec": [
+									"pm.test(\"Status code is 201\", () => {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Headers include location\", () => {",
+									"    pm.response.to.have.header(\"Location\");",
+									"});",
+									"",
+									"pm.test(\"Response has correct structure\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.comment_id).to.be.a('number');",
+									"    pm.expect(jsonData.comment).to.be.a('string');",
+									"    pm.expect(jsonData.picture_id).to.be.a('number');",
+									"    pm.expect(jsonData.user_id).to.be.a('number');",
+									"});",
+									"",
+									"pm.test(\"create last_comment_id env var\", () => {",
+									"    var comment = pm.response.json();",
+									"    pm.environment.set(\"last_comment_id\", comment.comment_id);",
+									"})"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"comment\": \"This is a comment\",\n\t\"user_id\": {{user_id}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_url}}/pictures/{{last_picture_id}}/comments",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"pictures",
+								"{{last_picture_id}}",
+								"comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete picture comment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "31a5dc66-e4e3-416b-a135-a30f7ca0e1ba",
+								"exec": [
+									"pm.test(\"Status code is 204\", () => {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/pictures/{{last_picture_id}}/comments/{{last_comment_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"pictures",
+								"{{last_picture_id}}",
+								"comments",
+								"{{last_comment_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "edd449b2-ea51-43c0-a2c9-d223cbcc0c6d",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"id": "b1554ff8-535c-4311-b267-732126989384",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "Images",
+			"item": [
+				{
+					"name": "Upload Image",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "0c16b33a-c1bd-4d94-a830-c1547bf34f8e",
+								"exec": [
+									"pm.test(\"create last_image_id env var\", () => {",
+									"    var image = pm.response.json();",
+									"    pm.environment.set(\"last_image_id\", image.image_id);",
+									"})",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Headers include location\", () => {",
+									"    pm.response.to.have.header(\"Location\");",
+									"});",
+									"",
+									"pm.test(\"Response has the correct structure\", () => {",
+									"    var image = pm.response.json();",
+									"    pm.expect(image.image_id).to.be.a('number');",
+									"    pm.expect(image.user_id).to.be.a('number');",
+									"    pm.expect(image.thumb_url).to.be.a('string');",
+									"    pm.expect(image.lowres_url).to.be.a('string');",
+									"    pm.expect(image.highres_url).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "file",
+							"file": {
+								"src": "/home/jopicornell/Downloads/abaski.jpg"
+							}
+						},
+						"url": {
+							"raw": "{{api_url}}/images?type=picture",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"images"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "picture"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "7305e5c5-6c8a-4332-a856-3443ba50fcb8",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "b26754e3-da75-4fc6-8240-8f61a9ea6e03",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"protocolProfileBehavior": {}
+}

@@ -1,20 +1,4 @@
 # Images API v1.0.0
-This is the 
-
-## Appointments module
-Basically, it is an appointment manager app. The flow is simple: 
- - The client calls the store or uses some app (google maps?) to make the appointment.
-    - Manager receives the appointment (via app or call) and assigns the employee
-    - Or Employee receives the unassigned appointment and makes him as the employee in charge
- - Client goes to the appointment
- - Employee marks him as waiting customer (optional step) 
- - Employee picks up the customer
- - Employee finishes the task and mark as finished the appointment
-
-From the perspective of a manager (the company owner or an administrator), the app will allow to set up the locations,
-employees, manage client data, see, set and assign the appointments. From the perspective of an employee, he will be
-able to see all appointments of the day, see all unasigned appointments, assign to him one unassigned appointment and
-mark as finished an appointment.
 
 ## Start the project
 This project uses the new go modules. This means you should have installed the latest version of go. This brings the
@@ -22,11 +6,13 @@ benefit (or drawback, if you are an old go developer 😜) that you could clone 
 run the `go mod download` and you should be done with dependencies.
 
 You should install and configure postgres to be able to run the migrations. After that run 
-`go build -o ./bin ./cmd/migrate` to be able to run the migrations and run `chmod +x ./bin/migrate`. Then to run the
-migrations is as easy as run `./bin/migrate up`.
+`go build -o ./bin ./cmd/migrate` to be able to run the migrations and run `chmod +x ./bin/migrate`. 
 
-Once migrations are ran, you can build the main app with `go build -o ./bin ./cmd/images-api`, give exec perms with 
-`chmod +x ./bin/images_api` and run `./bin/images_api`
+It is recommended to create a `palmaactiva` role and db, because go-jet is already configured to attack this dbs. If you want
+to configure another db you can, but you will need to reexecute go-jet, which is explained under the DB section of this readme.
+
+Then to run the migrations is as easy as run `./bin/migrate up`. Once migrations are ran, you can build the main app with 
+`go build -o ./bin ./cmd/images-api`, give exec perms with `chmod +x ./bin/images_api` and run `./bin/images_api`.
 
 ## Folder Structure
 Go language doesn't define a folder structure, but there's a non-official structure that I wanted to follow, as it is
@@ -34,8 +20,8 @@ a mix between what I learnt on PalmaActiva and what I saw on different projects 
 
 ### Cmd
 Here are all mains for all the commands. We tried to have the mains as simple as they could be. The migrate command is
-one of that commands that should be present on all projects that have persistent data on databases. All others are app
-related commands like users, appointments and so on.
+one of that commands that should be present on all projects that have persistent data on databases. The other is the
+app.
 
 ### Db
 Here are all db related files like migrations. 
@@ -54,7 +40,7 @@ To generate this files again with your structure, just run:
 ### Api
 The `api.go` file is the bootstrap of the app. It contains the little logic to start the handlers and the server.
 Here I separate in folders the different modules this app has. You'll find some files like `handler.go` that contain all
-the handler logic and `x_errors.go` that contain common used errors over the module and the app.
+the handler logic for each module.
 
 #### middlewares
 All the middlewares that are required for this or other modules. For example, the user middleware is used all over the app,

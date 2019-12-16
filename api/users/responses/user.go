@@ -8,3 +8,9 @@ type User struct {
 	FullName string                `json:"fullname"`
 	Image    *imageResponses.Image `json:"avatar"`
 }
+
+type UserWithoutAvatar struct {
+	UserID   int32  `json:"user_id"`
+	Username string `json:"username"`
+	FullName string `json:"fullname"`
+}

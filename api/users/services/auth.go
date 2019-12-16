@@ -25,6 +25,7 @@ type UsersService interface {
 	GetUser(id uint) (*responses.User, error)
 	UpdateUser(id uint, user *model.User) (*responses.User, error)
 	CheckUsername(username string) error
+	CheckUserAccess(user *models.UserWithRoles, userToModify *responses.User) bool
 }
 
 type usersService struct {
@@ -163,4 +164,12 @@ func (s *usersService) CheckUsername(username string) error {
 		}
 	}
 	return nil
+}
+
+func (s *usersService) CheckUserAccess(user *models.UserWithRoles, userToModify *responses.User) bool {
+	if user.HasRole(models.ADMIN_ROLE) {
+		return true
+	}
+	return user.UserID == userToModify.UserID
+
 }

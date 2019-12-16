@@ -90,11 +90,19 @@ func (a *UserHandler) UpdateUser(response server.Response, context server.Contex
 	var editUserRequest requests.EditUser
 	context.GetBodyMarshalled(&editUserRequest)
 	err := utilities.ValidateStruct(editUserRequest)
+	requestUser := context.GetUser().(*models.UserWithRoles)
 	if err != nil {
 		response.RespondValidationErrors(http.StatusBadRequest, err)
-		return
-	}
-	if picture, err := a.authService.UpdateUser(id, editUserRequest.TransformToUser()); err == nil {
+	} else if user, err := a.authService.GetUser(id); err != nil {
+		switch err {
+		case errors.UserNotFound:
+			response.Respond(http.StatusNotFound)
+		default:
+			response.Error(&server.Error{StatusCode: http.StatusInternalServerError, Error: err})
+		}
+	} else if !a.authService.CheckUserAccess(requestUser, user) {
+		response.Respond(http.StatusForbidden)
+	} else if picture, err := a.authService.UpdateUser(id, editUserRequest.TransformToUser()); err == nil {
 		if picture == nil {
 			response.Respond(http.StatusNotFound)
 			return

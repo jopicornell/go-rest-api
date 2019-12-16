@@ -10,7 +10,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	errors2 "github.com/jopicornell/go-rest-api/api/pictures/errors"
 	"github.com/jopicornell/go-rest-api/api/pictures/responses"
-	userErrors "github.com/jopicornell/go-rest-api/api/users/errors"
 	"github.com/jopicornell/go-rest-api/api/users/models"
 	"github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/model"
 	. "github.com/jopicornell/go-rest-api/db/entities/palmaactiva/image_gallery/table"
@@ -23,12 +22,14 @@ type PicturesService interface {
 	GetPicture(uint) (*responses.PictureWithImages, error)
 	GetPictureComments(uint) ([]responses.Comment, error)
 	GetPictureLikes(uint) ([]responses.Like, error)
-	UpdatePicture(uint, *model.Picture) (*responses.Picture, error)
+	UpdatePicture(uint, *model.Picture) (*responses.PictureWithImages, error)
 	CreatePicture(*model.Picture, *models.UserWithRoles) (*responses.Picture, error)
 	DeletePicture(id uint, user *models.UserWithRoles) error
 	CreatePictureComment(int32, *model.Comment) (*responses.Comment, error)
 	CreatePictureLike(pictureId int32, userID int32) error
 	DeletePictureLike(id int32, userId int32) error
+	DeletePictureComment(id int32, commentId int32) error
+	CheckUserAccess(user *models.UserWithRoles, model interface{}) bool
 }
 
 type pictureService struct {
@@ -56,7 +57,8 @@ func (s *pictureService) GetPictures() (pictures []responses.PictureWithImages, 
 	pictures = []responses.PictureWithImages{}
 	statement := SELECT(Picture.AllColumns, Image.AllColumns).FROM(
 		Picture.INNER_JOIN(Image, Picture.ImageID.EQ(Image.ImageID)),
-	)
+	).
+		ORDER_BY(Picture.Created.DESC())
 	sqlQuery := statement.DebugSql()
 	logrus.Info(sqlQuery)
 	if err = statement.Query(s.db, &pictures); err != nil {
@@ -67,9 +69,17 @@ func (s *pictureService) GetPictures() (pictures []responses.PictureWithImages, 
 
 func (s *pictureService) GetPicture(id uint) (*responses.PictureWithImages, error) {
 	picture := new(responses.PictureWithImages)
-	statement := SELECT(Picture.AllColumns, Image.AllColumns).FROM(
-		Picture.INNER_JOIN(Image, Picture.ImageID.EQ(Image.ImageID)),
-	).WHERE(Picture.PictureID.EQ(Int(int64(id))))
+	statement := SELECT(
+		Picture.AllColumns,
+		Image.AllColumns,
+		User.AS("user_without_avatar").FullName,
+		User.AS("user_without_avatar").Username,
+		User.AS("user_without_avatar").UserID,
+	).
+		FROM(Picture.
+			INNER_JOIN(Image, Picture.ImageID.EQ(Image.ImageID)).
+			INNER_JOIN(User.AS("user_without_avatar"), User.AS("user_without_avatar").UserID.EQ(Picture.UserID))).
+		WHERE(Picture.PictureID.EQ(Int(int64(id))))
 	sqlQuery := statement.DebugSql()
 	logrus.Info(sqlQuery)
 	if err := statement.Query(s.db, picture); err != nil {
@@ -99,6 +109,24 @@ func (s *pictureService) GetPictureComments(id uint) ([]responses.Comment, error
 	return comments, nil
 }
 
+func (s *pictureService) GetComment(id uint) (*responses.Comment, error) {
+	comment := new(responses.Comment)
+	statement := SELECT(Comment.AllColumns, User.UserID, User.AvatarID, User.FullName, Image.AllColumns).
+		FROM(Comment.
+			INNER_JOIN(User, User.UserID.EQ(Comment.UserID)).
+			LEFT_JOIN(Image, Image.ImageID.EQ(User.AvatarID))).
+		WHERE(Comment.CommentID.EQ(Int(int64(id))))
+	sqlQuery := statement.DebugSql()
+	logrus.Info(sqlQuery)
+	if err := statement.Query(s.db, comment); err != nil {
+		if err == qrm.ErrNoRows {
+			return nil, errors2.CommentNotFound
+		}
+		return nil, err
+	}
+	return comment, nil
+}
+
 func (s *pictureService) CreatePicture(picture *model.Picture, user *models.UserWithRoles) (*responses.Picture, error) {
 	tx := s.db.MustBegin()
 	statement := Picture.INSERT(Picture.ImageID, Picture.UserID, Picture.Title, Picture.Description).
@@ -111,20 +139,8 @@ func (s *pictureService) CreatePicture(picture *model.Picture, user *models.User
 		}
 		return nil, err
 	}
-	selectUser := SELECT(User.NumPictures).
-		FROM(User).
-		WHERE(User.UserID.EQ(Int(int64(user.UserID)))).
-		FOR(UPDATE())
-	userToUpdate := new(model.User)
-	if err := selectUser.Query(tx, userToUpdate); err != nil {
-		if errRollBack := tx.Rollback(); errRollBack != nil {
-			logrus.Errorf("Error rolling back", errRollBack)
-		}
-		return nil, err
-	}
-	userToUpdate.NumPictures++
 	updateUser := User.UPDATE(User.NumPictures).
-		SET(userToUpdate.NumPictures).
+		SET(User.NumPictures.ADD(Int(1))).
 		WHERE(User.UserID.EQ(Int(int64(user.UserID))))
 	if _, err := updateUser.Exec(tx); err != nil {
 		return nil, err
@@ -135,11 +151,15 @@ func (s *pictureService) CreatePicture(picture *model.Picture, user *models.User
 	return createdPicture, nil
 }
 
-func (s *pictureService) UpdatePicture(id uint, picture *model.Picture) (*responses.Picture, error) {
-	if picture == nil {
-		return nil, PictureNullError
+func (s *pictureService) UpdatePicture(id uint, picture *model.Picture) (*responses.PictureWithImages, error) {
+	updateStatement := Picture.UPDATE(Picture.Title, Picture.Description).
+		MODEL(picture).
+		WHERE(Picture.PictureID.EQ(Int(int64(id))))
+	logrus.Info(updateStatement.DebugSql())
+	if _, err := updateStatement.Exec(s.db); err != nil {
+		return nil, err
 	}
-	return nil, nil
+	return s.GetPicture(id)
 }
 
 func (s *pictureService) DeletePicture(id uint, user *models.UserWithRoles) (err error) {
@@ -155,10 +175,6 @@ func (s *pictureService) DeletePicture(id uint, user *models.UserWithRoles) (err
 			return errors2.PictureNotFound
 		}
 		return err
-	}
-	if picture.UserID != user.UserID && !user.HasRole(models.ADMIN_ROLE) {
-		tx.Rollback()
-		return userErrors.ForbiddenAction
 	}
 	pictureComments := getGroupedUsersForDelete(int64(id))
 	logrus.Info(pictureComments.DebugSql())
@@ -322,6 +338,63 @@ func (s *pictureService) DeletePictureLike(id int32, userId int32) error {
 		return err
 	}
 	return nil
+}
+
+func (s *pictureService) DeletePictureComment(id int32, commentId int32) error {
+	comment, err := s.GetComment(uint(commentId))
+	if err != nil {
+		if err == qrm.ErrNoRows {
+			return errors2.PictureNotFound
+		}
+		return err
+	}
+	statement := Comment.DELETE().
+		WHERE(Comment.CommentID.EQ(Int(int64(commentId))).
+			AND(Comment.PictureID.EQ(Int(int64(id)))))
+	logrus.Info(statement.DebugSql())
+	tx := s.db.MustBegin()
+	result, err := statement.Exec(tx)
+	numRows, _ := result.RowsAffected()
+	if err != nil || numRows == 0 {
+		if errRollBack := tx.Rollback(); errRollBack != nil {
+			logrus.Errorf("Error rolling back", errRollBack)
+		}
+		if numRows == 0 {
+			return errors2.PictureNotFound
+		}
+		return err
+	}
+	updatePicture := Picture.UPDATE(Picture.NumLikes).
+		SET(Picture.NumLikes.SUB(Int(1))).
+		WHERE(Picture.PictureID.EQ(Int(int64(id))))
+	if _, err := updatePicture.Exec(tx); err != nil {
+		return err
+	}
+	updateUser := User.UPDATE(User.NumLikes).
+		SET(User.NumLikes.SUB(Int(1))).
+		WHERE(User.UserID.EQ(Int(int64(comment.UserID))))
+	if _, err := updateUser.Exec(tx); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *pictureService) CheckUserAccess(user *models.UserWithRoles, modelCheck interface{}) bool {
+	if user.HasRole(models.ADMIN_ROLE) {
+		return true
+	}
+	switch modelCheck.(type) {
+	case *responses.PictureWithImages:
+		return user.UserID == modelCheck.(*responses.PictureWithImages).UserID
+	case *model.Comment:
+		return user.UserID == modelCheck.(*model.Comment).UserID
+	case *model.Like:
+		return user.UserID == modelCheck.(*model.Like).UserID
+	}
+	return false
 }
 
 func getGroupedUsersForDelete(id int64) SelectStatement {

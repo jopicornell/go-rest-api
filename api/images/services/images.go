@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/google/uuid"
 	"github.com/graux/image-manager"
 	"github.com/jopicornell/go-rest-api/api/pictures/responses"
 	"github.com/jopicornell/go-rest-api/api/users/models"
@@ -15,20 +16,28 @@ func NewImagesService(server server.Server) ImageService {
 }
 
 type ImageService interface {
-	SavePicture(user *models.UserWithRoles, imageBytes []byte) *responses.Image
+	SavePicture(user *models.UserWithRoles, imageBytes []byte, imageType string) *responses.Image
 }
 
 type imagesService struct {
 	server server.Server
 }
 
-func (is *imagesService) SavePicture(user *models.UserWithRoles, imageBytes []byte) *responses.Image {
+func (is *imagesService) SavePicture(user *models.UserWithRoles, imageBytes []byte, imageType string) *responses.Image {
 	imagesPath, err := filepath.Abs("./images")
 	if err != nil {
 		logrus.Panicf("error getting the images folder: %s", err)
 	}
 	imageManager := image_manger.NewImageManager(imagesPath)
-	uuids, err := imageManager.ProcessImageAs16by9(imageBytes)
+	var uuids []uuid.UUID
+	if imageType == "avatar" {
+		uuids, err = imageManager.ProcessImageAsSquare(imageBytes)
+	} else {
+		uuids, err = imageManager.ProcessImageAs16by9(imageBytes)
+	}
+	if err != nil {
+		logrus.Panicf("error processing the images: %s", err)
+	}
 	thumb := "files/images/" + uuids[0].String() + ".jpg"
 	lowRes := "files/images/" + uuids[1].String() + ".jpg"
 	highRes := "files/images/" + uuids[2].String() + ".jpg"
